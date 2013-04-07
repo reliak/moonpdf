@@ -1,0 +1,85 @@
+Over time Sumatra accrued code using different naming styles.
+
+Let's fix that.
+
+This document describes the naming style we should use in
+future code (and, as a low priority, convert existing code
+to that style).
+
+Coding styles are always controversial because they are mostly
+a matter of opinion.
+
+This coding style follows 2 main principles:
+* codify the style that is already used frequently in Sumatra
+* clean looking code (which is e.g. why we avoid "_" prefixes or postfixes in names)
+
+1. Naming classes, methods, functions, variables
+------------------------------------------------
+
+The best way to describe naming style is via examples.
+
+struct ThisIsStruct
+{
+    bool    firstMember;
+    int     second;
+    char    seeHowWeAlignNames;
+};
+
+class ThisIsClass
+{
+    bool   firstDataMember;
+    int    second;
+
+    bool   ThisIsMethod(int inArgsGoFirst, WCHAR *outArgsGoLast);
+};
+
+bool ThisIsFunction(int inArgsGoFirst, int *outArgsGoLast)
+{
+    bool   variableName = true;
+    *outArgsGoLast = 5;
+    return variableName;
+}
+
+int gThisIsGlobalVariable;
+
+2. Tabs vs. spaces
+------------------
+
+We use spaces, not tabs, with 4 space indentation.
+
+3. Naming of header guards
+--------------------------
+
+We use Webkit's style:
+
+"#define, #ifdef "header guards" should be named exactly the same as the file (
+including case), replacing the '.' with a '_'."
+
+http://www.webkit.org/coding/coding-style.html
+
+4. #include statements
+----------------------
+
+.cpp files:
+- #include "BaseUtil.h" first
+- followed by .h corresponding to .cpp i.e. Foo.cpp => #include "Foo.h"
+- followed by system headers (C library, additional windows headers)
+- followed by .h for Sumatra's files, sorted by name
+- as an exception to the "sort by name" rule, #include "DebugLog.h" 
+  can be at the end
+
+.h files:
+- should never include "BaseUtil.h"
+- need to include all the .h files they depend on, although it's preferred
+  to use pointers in APIs and pre-declaring types i.e.:
+
+// Bar.h
+class Foo;
+void Bar(Foo *);
+
+is better than:
+
+// Bar.h
+#include "Foo.h"
+void Bar(Foo& );
+

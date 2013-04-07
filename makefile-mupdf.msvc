@@ -1,0 +1,66 @@
+# nmake -f makefile.msvc
+# Arguments:
+# EXTDIR=<directory where zlib/freetype/jpeg lib live> (default: ext)
+#  e.g. ..\sumatrapdf\ext
+# EXTCFLAGS=$CFLAGS
+# PLATFORM=X86
+#   the PLATFORM var is usually set in the x64 and x64 cross tools Visual Studio command prompt
+#   note: building on X64 isn't officially supported and might unintentionally be broken
+#WITH_ANALYZE=yes
+#   use /analyze for all code
+
+# Set default configuration
+CFG=rel
+SUMATRA_DIR=ext\sumatra
+NASM=$(SUMATRA_DIR)\bin\nasm.exe
+
+# O is directory where object and binary files go
+O = $(SUMATRA_DIR)\output\$(PLATFORM)
+
+!if "$(MUPDF_DIR)"==""
+MUPDF_DIR=$(SUMATRA_DIR)\mupdf
+!endif
+
+!if "$(EXTDIR)"==""
+EXTDIR=$(SUMATRA_DIR)\ext
+!endif
+
+# default target
+all_mupdf: MuPDF
+
+!INCLUDE $(MUPDF_DIR)\makefile.msvc
+
+# some libraries require stdint.h
+CFLAGS = $(CFLAGS) /Isrc/utils/msvc
+CFLAGSOPT = $(CFLAGSOPT) /Isrc/utils/msvc
+
+# include build data for the remaining third-party libraries
+!INCLUDE $(EXTDIR)\makefile.msvc
+
+# Modify the following defines if you have to target a platform prior to the ones specified below.
+# Their meaning: http://msdn.microsoft.com/en-us/library/aa383745(VS.85).aspx
+# and http://blogs.msdn.com/oldnewthing/archive/2007/04/11/2079137.aspx
+# We set the features uniformly to Windows 2000 or later.
+CFLAGS = $(CFLAGS) /D "WINVER=0x0500" /D "_WIN32_WINNT=0x0500"
+# Suppress warning C4800: forcing value to bool 'true' or 'false'
+CFLAGS = $(CFLAGS) /wd4800
+
+RC_FLAGS = $(EXTCFLAGS)
+
+LIBS = $(LIBS) \
+	comctl32.lib Msimg32.lib Winspool.lib wininet.lib \
+	ole32.lib OleAut32.lib shlwapi.lib version.lib \
+	WindowsCodecs.lib
+
+LIBMUPDF_LIB = $(O)\libmupdf.lib
+LIBMUPDF_DEF = $(SUMATRA_DIR)\src\libmupdf.def
+LIBMUPDF_DLL = $(O)\libmupdf.dll
+LIBMUPDF_RES = $(O)\libmupdf.res
+
+MuPDF:    $(O) $(LIBMUPDF_DLL)
+
+$(LIBMUPDF_RES): $(SUMATRA_DIR)\src\libmupdf.rc $(SUMATRA_DIR)\src\Version.h
+	rc /r /fo$@ $(RC_FLAGS) $(SUMATRA_DIR)\src\libmupdf.rc
+
+$(LIBMUPDF_DLL): $(LIBS_OBJS) $(LIBMUPDF_DEF) $(LIBMUPDF_RES)
+	$(LD) /DLL $(LDFLAGS) $(LIBS_OBJS) $(LIBMUPDF_RES) $(LIBS) /DEF:$(LIBMUPDF_DEF) /IMPLIB:$(LIBMUPDF_LIB) /OUT:$@

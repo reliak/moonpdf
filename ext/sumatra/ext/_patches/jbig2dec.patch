@@ -1,0 +1,188 @@
+diff -rPu5 jbig2dec.orig\jbig2.h jbig2dec\jbig2.h
+--- jbig2dec.orig\jbig2.h	Sun Aug 26 12:06:26 2012
++++ jbig2dec\jbig2.h	Thu Jul 05 14:18:19 2012
+@@ -27,16 +27,19 @@
+ 
+ /* To enable Memento, either uncomment the following, or arrange to
+  * predefine MEMENTO whilst building. */
+ /* #define MEMENTO */
+ 
++/* SumatraPDF: allow to build without MEMENTO (clashes with MuPDF's) */
++#ifdef MEMENTO
+ /* If we are building as part of GS then make sure we use the version
+  * of MEMENTO that is part of gs (in case of version skew) */
+ #ifdef GSBUILD
+ #include "../base/memento.h"
+ #else
+ #include "memento.h"
++#endif
+ #endif
+ 
+ /* warning levels */
+ typedef enum {
+   JBIG2_SEVERITY_DEBUG,
+diff -rPu5 jbig2dec.orig\jbig2_huffman.c jbig2dec\jbig2_huffman.c
+--- jbig2dec.orig\jbig2_huffman.c	Sun Aug 26 12:06:26 2012
++++ jbig2dec\jbig2_huffman.c	Sat Aug 18 18:20:14 2012
+@@ -253,11 +253,12 @@
+   for (;;)
+     {
+       int log_table_size = table->log_table_size;
+       int PREFLEN;
+ 
+-      entry = &table->entries[this_word >> (32 - log_table_size)];
++      /* SumatraPDF: shifting by the size of the operand is undefined */
++      entry = &table->entries[log_table_size > 0 ? this_word >> (32 - log_table_size) : 0];
+       flags = entry->flags;
+       PREFLEN = entry->PREFLEN;
+       if ((flags == (byte)-1) && (PREFLEN == (byte)-1) && (entry->u.RANGELOW == -1))
+       {
+           if (oob)
+diff -rPu5 jbig2dec.orig\jbig2_symbol_dict.c jbig2dec\jbig2_symbol_dict.c
+--- jbig2dec.orig\jbig2_symbol_dict.c	Sun Aug 26 12:06:26 2012
++++ jbig2dec\jbig2_symbol_dict.c	Sat Dec 15 16:40:37 2012
+@@ -147,11 +147,12 @@
+     Jbig2Segment *rsegment;
+     int n_dicts = 0;
+ 
+     for (index = 0; index < segment->referred_to_segment_count; index++) {
+         rsegment = jbig2_find_segment(ctx, segment->referred_to_segments[index]);
+-        if (rsegment && ((rsegment->flags & 63) == 0)) n_dicts++;
++        /* SumatraPDF: don't include empty segments */
++        if (rsegment && ((rsegment->flags & 63) == 0) && rsegment->result) n_dicts++;
+     }
+ 
+     return (n_dicts);
+ }
+ 
+@@ -173,11 +174,12 @@
+         return NULL;
+     }
+ 
+     for (index = 0; index < segment->referred_to_segment_count; index++) {
+         rsegment = jbig2_find_segment(ctx, segment->referred_to_segments[index]);
+-        if (rsegment && ((rsegment->flags & 63) == 0)) {
++        /* SumatraPDF: don't include empty segments */
++        if (rsegment && ((rsegment->flags & 63) == 0) && rsegment->result) {
+             /* add this referred to symbol dictionary */
+             dicts[dindex++] = (Jbig2SymbolDict *)rsegment->result;
+         }
+     }
+ 
+@@ -289,11 +291,11 @@
+               "failed to allocate storage for symbol bitmap");
+           goto cleanup1;
+       }
+       if (params->SDREFAGG) {
+           int64_t tmp = params->SDNUMINSYMS + params->SDNUMNEWSYMS;
+-          for (SBSYMCODELEN = 0; (1 << SBSYMCODELEN) < tmp; SBSYMCODELEN++);
++          for (SBSYMCODELEN = 0; (int64_t)(1 << SBSYMCODELEN) < tmp; SBSYMCODELEN++);
+           IAID = jbig2_arith_iaid_ctx_new(ctx, SBSYMCODELEN);
+           IARDX = jbig2_arith_int_ctx_new(ctx);
+           IARDY = jbig2_arith_int_ctx_new(ctx);
+           if ((IAID == NULL) || (IARDX == NULL) || (IARDY == NULL))
+           {
+@@ -595,10 +597,17 @@
+ 		      /* Table 18 */
+ 		      rparams.GRTEMPLATE = params->SDRTEMPLATE;
+ 		      rparams.reference = (ID < ninsyms) ?
+ 					params->SDINSYMS->glyphs[ID] :
+ 					SDNEWSYMS->glyphs[ID-ninsyms];
++		      /* SumatraPDF: fail on missing glyphs */
++		      if (rparams.reference == NULL) {
++		          code = jbig2_error(ctx, JBIG2_SEVERITY_FATAL, segment->number,
++		              "missing glyph %d/%d!", ID, ninsyms);
++		          jbig2_image_release(ctx, image);
++		          goto cleanup4;
++		      }
+ 		      rparams.DX = RDX;
+ 		      rparams.DY = RDY;
+ 		      rparams.TPGRON = 0;
+ 		      memcpy(rparams.grat, params->sdrat, 4);
+ 		      jbig2_decode_refinement_region(ctx, segment,
+@@ -673,10 +682,17 @@
+ 	  const byte *src = data + jbig2_huffman_offset(hs);
+ 	  const int stride = (image->width >> 3) +
+ 		((image->width & 7) ? 1 : 0);
+ 	  byte *dst = image->data;
+ 
++	  /* SumatraPDF: prevent read access violation */
++	  if (size - jbig2_huffman_offset(hs) < image->height * stride) {
++	    jbig2_error(ctx, JBIG2_SEVERITY_FATAL, segment->number, "not enough data for decoding (%d/%d)", image->height * stride, size - jbig2_huffman_offset(hs));
++	    jbig2_image_release(ctx, image);
++	    goto cleanup4;
++	  }
++
+ 	  BMSIZE = image->height * stride;
+ 	  jbig2_error(ctx, JBIG2_SEVERITY_DEBUG, segment->number,
+ 	    "reading %dx%d uncompressed bitmap"
+ 	    " for %d symbols (%d bytes)",
+ 	    image->width, image->height, NSYMSDECODED - HCFIRSTSYM, BMSIZE);
+@@ -687,10 +703,17 @@
+ 	    src += stride;
+ 	  }
+ 	} else {
+ 	  Jbig2GenericRegionParams rparams;
+ 
++	  /* SumatraPDF: prevent read access violation */
++	  if (size - jbig2_huffman_offset(hs) < BMSIZE) {
++	    jbig2_error(ctx, JBIG2_SEVERITY_FATAL, segment->number, "not enough data for decoding (%d/%d)", BMSIZE, size - jbig2_huffman_offset(hs));
++	    jbig2_image_release(ctx, image);
++	    goto cleanup4;
++	  }
++
+ 	  jbig2_error(ctx, JBIG2_SEVERITY_DEBUG, segment->number,
+ 	    "reading %dx%d collective bitmap for %d symbols (%d bytes)",
+ 	    image->width, image->height, NSYMSDECODED - HCFIRSTSYM, BMSIZE);
+ 
+ 	  rparams.MMR = 1;
+@@ -742,20 +765,28 @@
+     int j = 0;
+     int k;
+     int exflag = 0;
+     int64_t limit = params->SDNUMINSYMS + params->SDNUMNEWSYMS;
+     int32_t exrunlength;
++    /* SumatraPDF: prevent infinite loop */
++    int zerolength = 0;
+ 
+     while (i < limit) {
+       if (params->SDHUFF)
+         exrunlength = jbig2_huffman_get(hs, SBHUFFRSIZE, &code);
+       else
+         code = jbig2_arith_int_decode(IAEX, as, &exrunlength);
+-      if (code || (exrunlength > limit - i)) {
++      /* SumatraPDF: prevent infinite loop */
++      zerolength = exrunlength > 0 ? 0 : zerolength + 1;
++      if (code || (exrunlength > limit - i) || (exrunlength < 0) || (zerolength > 4)) {
+         if (code)
+           jbig2_error(ctx, JBIG2_SEVERITY_FATAL, segment->number,
+             "failed to decode exrunlength for exported symbols");
++        /* SumatraPDF: prevent infinite loop */
++        else if (exrunlength <= 0)
++          jbig2_error(ctx, JBIG2_SEVERITY_FATAL, segment->number,
++            "runlength too small in export symbol table (%d <= 0)\n", exrunlength);
+         else
+           jbig2_error(ctx, JBIG2_SEVERITY_FATAL, segment->number,
+             "runlength too large in export symbol table (%d > %d - %d)\n",
+             exrunlength, params->SDNUMEXSYMS, j);
+         /* skip to the cleanup code and return SDEXSYMS = NULL */
+diff -rPu5 jbig2dec.orig\jbig2_text.c jbig2dec\jbig2_text.c
+--- jbig2dec.orig\jbig2_text.c	Sun Aug 26 12:06:26 2012
++++ jbig2dec\jbig2_text.c	Sun Aug 19 00:58:18 2012
+@@ -300,10 +300,16 @@
+ 
+ 		index = 0;
+ 		while (id >= dicts[index]->n_symbols)
+ 		    id -= dicts[index++]->n_symbols;
+ 		IB = jbig2_image_clone(ctx, dicts[index]->glyphs[id]);
++		/* SumatraPDF: fail on missing glyphs */
++		if (!IB) {
++		    code = jbig2_error(ctx, JBIG2_SEVERITY_FATAL, segment->number,
++		        "missing glyph %d/%d!", index, id);
++		    goto cleanup2;
++		}
+ 	    }
+ 	    if (params->SBREFINE) {
+ 	      if (params->SBHUFF) {
+ 		RI = jbig2_huffman_get_bits(hs, 1);
+ 	      } else {

@@ -1,0 +1,118 @@
+# include this after mupdf\makefile.msvc
+
+!if "$(O)"==""
+!error Include mupdf\makefile.msvc first (or build ..\makefile.msvc instead)
+!endif
+
+OE = $(O)\ext
+OBZ= $(O)\bzip2
+OR = $(O)\unrar
+ODV= $(O)\djvu
+OC = $(O)\chmlib
+
+SYNCTEX_CFLAGS = $(CFLAGS) /I$(EXTDIR)/synctex /I$(ZLIB_DIR) /TC /wd4244 /wd4996
+!if "$(PLATFORM)"=="X64"
+SYNCTEX_CFLAGS = $(SYNCTEX_CFLAGS) /wd4267
+!endif
+
+BZIP2_CFLAGS = $(CFLAGSOPT) /D "BZ_NO_STDIO" /D "BZ_DEBUG=0"
+!if "$(PLATFORM)"=="X64"
+BZIP2_CFLAGS = $(BZIP2_CFLAGS) /wd4244
+!endif
+MINIZIP_CFLAGS = $(CFLAGS) /D "HAVE_BZIP2" /I$(ZLIB_DIR) /I$(EXTDIR)/bzip2
+MINIZIP_CFLAGS = $(MINIZIP_CFLAGS) /D "UNICODE" /D "_UNICODE" /D "INC_CUSTOM_ALLOC=\"unzalloc.h\"" /D "NOCRYPT"
+
+UNRAR_CFLAGS = $(CFLAGSOPT) /D "UNRAR" /D "RARDLL" /D "SILENT" /wd4996
+# a hack to enable C++ exception handling for UnRAR (without triggering a warning)
+UNRAR_CFLAGS = $(UNRAR_CFLAGS:/EHs-c-=/EHsc)
+
+DJVU_CFLAGS = $(CFLAGSOPT) /D "NEED_JPEG_DECODER" /I$(JPEG_TURBO_DIR) /wd4996
+DJVU_CFLAGS = $(DJVU_CFLAGS) /D "THREADMODEL=0" /D "DDJVUAPI=/**/" /D "MINILISPAPI=/**/"
+# prevent libdjvu from changing the C locale from underneath anybody else
+DJVU_CFLAGS = $(DJVU_CFLAGS) /D "DO_CHANGELOCALE=0"
+# a hack to enable C++ exception handling for libdjvu (without triggering a warning)
+DJVU_CFLAGS = $(DJVU_CFLAGS:/EHs-c-=/EHsc)
+!if "$(PLATFORM)"=="X64"
+DJVU_CFLAGS = $(DJVU_CFLAGS) /wd4244 /wd4267
+!endif
+
+CHMLIB_CFLAGS = $(CFLAGS) /D "CHM_MT" /wd4244 /wd4018 /wd4996
+# ChmLib also needs PPC_BSTR defined for UNICODE builds
+CHMLIB_CFLAGS = $(CHMLIB_CFLAGS) /D "UNICODE" /D "_UNICODE" /D "PPC_BSTR"
+
+SYNCTEX_OBJS = \
+	$(OE)\synctex_parser.obj $(OE)\synctex_parser_utils.obj
+
+BZIP2_OBJS = \
+	$(OBZ)\blocksort.obj $(OBZ)\bzlib.obj $(OBZ)\compress.obj $(OBZ)\crctable.obj \
+	$(OBZ)\decompress.obj $(OBZ)\huffman.obj $(OBZ)\randtable.obj $(OBZ)\bz_internal_error.obj
+
+MINIZIP_OBJS = \
+	$(OZ)\unzip.obj $(OZ)\unzalloc.obj $(OZ)\ioapi.obj $(OZ)\iowin32.obj \
+	$(OZ)\iowin32s.obj $(OZ)\zip.obj
+
+UNRAR_OBJS = \
+	$(OR)\archive.obj $(OR)\arcread.obj $(OR)\cmddata.obj \
+	$(OR)\consio.obj $(OR)\crc.obj $(OR)\crypt.obj $(OR)\encname.obj \
+	$(OR)\errhnd.obj $(OR)\extinfo.obj $(OR)\extract.obj $(OR)\filcreat.obj \
+	$(OR)\file.obj $(OR)\filefn.obj $(OR)\filestr.obj $(OR)\find.obj $(OR)\getbits.obj \
+	$(OR)\global.obj $(OR)\isnt.obj  $(OR)\list.obj $(OR)\match.obj \
+	$(OR)\pathfn.obj $(OR)\options.obj $(OR)\rar.obj $(OR)\rarvm.obj \
+	$(OR)\rawread.obj $(OR)\rdwrfn.obj $(OR)\recvol.obj \
+	$(OR)\resource.obj $(OR)\rijndael.obj $(OR)\rs.obj $(OR)\savepos.obj \
+	$(OR)\scantree.obj $(OR)\sha1.obj $(OR)\smallfn.obj $(OR)\strfn.obj \
+	$(OR)\strlist.obj $(OR)\system.obj $(OR)\timefn.obj \
+	$(OR)\ulinks.obj $(OR)\unicode.obj $(OR)\unpack.obj \
+	$(OR)\volume.obj $(OR)\dll.obj $(OR)\secpassword.obj
+
+DJVU_OBJS = \
+	$(ODV)\Arrays.obj $(ODV)\atomic.obj $(ODV)\BSByteStream.obj \
+	$(ODV)\BSEncodeByteStream.obj $(ODV)\ByteStream.obj $(ODV)\DataPool.obj \
+	$(ODV)\DjVmDir0.obj $(ODV)\DjVmDoc.obj $(ODV)\DjVmNav.obj \
+	$(ODV)\DjVuAnno.obj $(ODV)\DjVuDocEditor.obj $(ODV)\DjVuDocument.obj \
+	$(ODV)\DjVuDumpHelper.obj $(ODV)\DjVuErrorList.obj $(ODV)\DjVuFile.obj \
+	$(ODV)\DjVuFileCache.obj $(ODV)\DjVuGlobal.obj $(ODV)\DjVuGlobalMemory.obj \
+	$(ODV)\DjVuImage.obj $(ODV)\DjVuInfo.obj $(ODV)\DjVuMessage.obj \
+	$(ODV)\DjVuMessageLite.obj $(ODV)\DjVuNavDir.obj $(ODV)\DjVuPalette.obj \
+	$(ODV)\DjVuPort.obj $(ODV)\DjVuText.obj $(ODV)\DjVuToPS.obj \
+	$(ODV)\GBitmap.obj $(ODV)\GContainer.obj $(ODV)\GException.obj \
+	$(ODV)\GIFFManager.obj $(ODV)\GMapAreas.obj $(ODV)\GOS.obj \
+	$(ODV)\GPixmap.obj $(ODV)\GRect.obj $(ODV)\GScaler.obj \
+	$(ODV)\GSmartPointer.obj $(ODV)\GString.obj $(ODV)\GThreads.obj \
+	$(ODV)\GUnicode.obj $(ODV)\GURL.obj $(ODV)\IFFByteStream.obj \
+	$(ODV)\IW44EncodeCodec.obj $(ODV)\IW44Image.obj $(ODV)\JB2EncodeCodec.obj \
+	$(ODV)\DjVmDir.obj $(ODV)\JB2Image.obj $(ODV)\JPEGDecoder.obj \
+	$(ODV)\MMRDecoder.obj $(ODV)\MMX.obj $(ODV)\UnicodeByteStream.obj \
+	$(ODV)\XMLParser.obj $(ODV)\XMLTags.obj $(ODV)\ZPCodec.obj \
+	$(ODV)\ddjvuapi.obj $(ODV)\debug.obj $(ODV)\miniexp.obj
+
+CHMLIB_OBJS = \
+	$(OC)\chm_lib.obj $(OC)\lzx.obj
+
+$(OE): force
+	@if not exist $(OE) mkdir $(OE)
+	@if not exist $(OBZ) mkdir $(OBZ)
+	@if not exist $(OR) mkdir $(OR)
+	@if not exist $(ODV) mkdir $(ODV)
+	@if not exist $(OC) mkdir $(OC)
+
+{baseutils}.cpp{$(OS)}.obj::
+	$(CC) $(SUMATRA_CFLAGS) /Fo$(OS)\ /Fd$(O)\vc80.pdb $<
+
+{$(EXTDIR)\bzip2}.c{$(OBZ)}.obj::
+	$(CC) $(BZIP2_CFLAGS) /Fo$(OBZ)\ /Fd$(O)\vc80.pdb $<
+
+{$(EXTDIR)\unrar}.cpp{$(OR)}.obj::
+	$(CC) $(UNRAR_CFLAGS) /Fo$(OR)\ /Fd$(O)\vc80.pdb $<
+
+{$(ZLIB_DIR)\minizip}.c{$(OZ)}.obj::
+	$(CC) $(MINIZIP_CFLAGS) /Fo$(OZ)\ /Fd$(O)\vc80.pdb $<
+
+{$(EXTDIR)\synctex}.c{$(OE)}.obj::
+	$(CC) $(SYNCTEX_CFLAGS) /Fo$(OE)\ /Fd$(O)\vc80.pdb $<
+
+{$(EXTDIR)\libdjvu}.cpp{$(ODV)}.obj::
+	$(CC) $(DJVU_CFLAGS) /Fo$(ODV)\ /Fd$(O)\vc80.pdb $<
+
+{$(EXTDIR)\CHMLib\src}.c{$(OC)}.obj::
+	$(CC) $(CHMLIB_CFLAGS) /Fo$(OC)\ /Fd$(O)\vc80.pdb $<

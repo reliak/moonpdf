@@ -1,0 +1,21 @@
+<!--
+	Call this file via msbuild.
+
+	For X64 you can use the "VS2012 x64 Native Tools Command Prompt"
+	
+	Example usage:
+	msbuild build-all.msbuild /p:platform=X64
+	
+	Note that the property 'platform' is case sensitive here, so please use X64 and NOT x64
+-->
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+	<PropertyGroup>
+		<platform Condition="$(platform) == ''">X86</platform> 
+	</PropertyGroup>
+	<Target Name="Build">
+		<RemoveDir Directories="ext/sumatra/output/$(platform)" />
+		<exec Command="nmake -f makefile-mupdf.msvc platform=$(platform)"/>
+		<Copy SourceFiles="ext/sumatra/output/$(platform)/libmupdf.dll" DestinationFolder="bin/MuLib/$(platform)" />
+		<MSBuild Projects="src/MoonPdf.sln" Targets="Rebuild" Properties="Configuration=Release;Platform=$(platform);AllowUnsafeBlocks=true"/>
+	</Target>
+</Project>

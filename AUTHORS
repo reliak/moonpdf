@@ -1,0 +1,25 @@
+The code under src contains code by Daniel Kailer <coding@reliak.de>.
+It is licensed as GPL v3 (see COPYING).
+
+External projects are by their various authors:
+- W. Jordan:
+  - License: GPL v3
+  - Provided the base of the MuPdfWrapper class, which accesses the native MuPdf-API to extract images from a PDF file
+  - Website: http://www.codeproject.com/Articles/498317/Rendering-PDF-Documents-with-Mupdf-and-P-Invoke-in
+
+- Paul McClean:
+  - License: GPL v3
+  - Provided the base of the data virtualization logic and CustomVirtualizingPanel, which was used as the basis for the continuous page layout (ContinuousMoonPdfPanel)
+  - Source: http://www.codeproject.com/Articles/34405/WPF-Data-Virtualization
+
+- George Mamaladze:
+  - License: New BSD (see ext/MouseKeyboardActivityMonitor/COPYING)
+  - Provided the MouseKeyboardActivityMonitor.dll to enable easier global mouse hooks (using in MoonPdfPanelInputHandler)
+  - Source: http://globalmousekeyhook.codeplex.com
+
+- Patrick (http://stackoverflow.com/users/288435/patrick):
+  - License: CC-BY-SA 3.0
+  - Provided the MenuItemExtensions class to enable mutally exclusive checkboxes
+  - Source: http://stackoverflow.com/questions/3652688/mutually-exclusive-checkable-menu-items
+
+- For the sumatra project see ext/sumatra/AUTHORS.

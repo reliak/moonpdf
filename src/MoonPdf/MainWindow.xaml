@@ -1,0 +1,48 @@
+﻿<Window x:Class="MoonPdf.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:mpp="clr-namespace:MoonPdfLib;assembly=MoonPdfLib"
+        xmlns:mpd="clr-namespace:MoonPdf"
+        Title="MainWindow" WindowStartupLocation="CenterScreen" Height="768" Width="640" UseLayoutRounding="True" MinHeight="350" MinWidth="450">
+    <DockPanel LastChildFill="True" UseLayoutRounding="True">
+        <Menu x:Name="mainMenu" IsMainMenu="True" DockPanel.Dock="Top">
+            <MenuItem Header="_File">
+                <MenuItem Header="{Binding Commands.OpenCommand.Name}" Command="{Binding Commands.OpenCommand}" InputGestureText="{Binding Commands.OpenCommand.GestureText}" />
+                <Separator/>
+                <MenuItem Header="{Binding Commands.ExitCommand.Name}" Command="{Binding Commands.ExitCommand}" InputGestureText="{Binding Commands.ExitCommand.GestureText}" />
+            </MenuItem>
+            <MenuItem Header="_View">
+                <MenuItem x:Name="viewSingle" Header="{Binding Commands.SinglePageCommand.Name}" Command="{Binding Commands.SinglePageCommand}" InputGestureText="{Binding Commands.SinglePageCommand.GestureText}" mpd:MenuItemExtensions.GroupName="displaytype" IsCheckable="True"/>
+                <MenuItem x:Name="viewFacing" Header="{Binding Commands.FacingCommand.Name}" Command="{Binding Commands.FacingCommand}" InputGestureText="{Binding Commands.FacingCommand.GestureText}" mpd:MenuItemExtensions.GroupName="displaytype" IsCheckable="True"/>
+                <MenuItem x:Name="viewBook"   Header="{Binding Commands.BookViewCommand.Name}" Command="{Binding Commands.BookViewCommand}" InputGestureText="{Binding Commands.BookViewCommand.GestureText}" mpd:MenuItemExtensions.GroupName="displaytype" IsCheckable="True"/>
+                <Separator/>
+                <MenuItem x:Name="itmContinuously" IsCheckable="True" Header="{Binding Commands.TogglePageDisplayCommand.Name}" Command="{Binding Commands.TogglePageDisplayCommand}" InputGestureText="{Binding Commands.TogglePageDisplayCommand.GestureText}"/>
+                <Separator/>
+                <MenuItem Header="{Binding Commands.RotateLeftCommand.Name}" Command="{Binding Commands.RotateLeftCommand}" InputGestureText="{Binding Commands.RotateLeftCommand.GestureText}" />
+                <MenuItem Header="{Binding Commands.RotateRightCommand.Name}" Command="{Binding Commands.RotateRightCommand}" InputGestureText="{Binding Commands.RotateRightCommand.GestureText}" />
+                <Separator/>
+                <MenuItem IsCheckable="True" x:Name="itmFullscreen" Header="{Binding Commands.FullscreenCommand.Name}" Command="{Binding Commands.FullscreenCommand}" InputGestureText="{Binding Commands.FullscreenCommand.GestureText}" />
+            </MenuItem>
+            <MenuItem Header="_Zoom">
+                <MenuItem Header="{Binding Commands.ZoomInCommand.Name}" Command="{Binding Commands.ZoomInCommand}" InputGestureText="{Binding Commands.ZoomInCommand.GestureText}" />
+                <MenuItem Header="{Binding Commands.ZoomOutCommand.Name}" Command="{Binding Commands.ZoomOutCommand}" InputGestureText="{Binding Commands.ZoomOutCommand.GestureText}" />
+                <Separator/>
+                <MenuItem IsCheckable="True" x:Name="itmFitWidth" Header="{Binding Commands.FitWidthCommand.Name}" Command="{Binding Commands.FitWidthCommand}" InputGestureText="{Binding Commands.FitWidthCommand.GestureText}" mpd:MenuItemExtensions.GroupName="zoomtype"/>
+                <MenuItem IsCheckable="True" x:Name="itmFitHeight" Header="{Binding Commands.FitHeightCommand.Name}" Command="{Binding Commands.FitHeightCommand}" InputGestureText="{Binding Commands.FitHeightCommand.GestureText}" mpd:MenuItemExtensions.GroupName="zoomtype"/>
+                <MenuItem IsCheckable="True" x:Name="itmCustomZoom" Header="{Binding Commands.CustomZoomCommand.Name}" Command="{Binding Commands.CustomZoomCommand}" InputGestureText="{Binding Commands.CustomZoomCommand.GestureText}" mpd:MenuItemExtensions.GroupName="zoomtype"/>
+            </MenuItem>
+            <MenuItem Header="_Goto">
+                <MenuItem Header="{Binding Commands.NextPageCommand.Name}" Command="{Binding Commands.NextPageCommand}" InputGestureText="{Binding Commands.NextPageCommand.GestureText}"/>
+                <MenuItem Header="{Binding Commands.PreviousPageCommand.Name}" Command="{Binding Commands.PreviousPageCommand}" InputGestureText="{Binding Commands.PreviousPageCommand.GestureText}"/>
+                <MenuItem Header="{Binding Commands.FirstPageCommand.Name}" Command="{Binding Commands.FirstPageCommand}" InputGestureText="{Binding Commands.FirstPageCommand.GestureText}"/>
+                <MenuItem Header="{Binding Commands.LastPageCommand.Name}" Command="{Binding Commands.LastPageCommand}" InputGestureText="{Binding Commands.LastPageCommand.GestureText}"/>
+                <Separator/>
+                <MenuItem Header="{Binding Commands.GotoPageCommand.Name}" Command="{Binding Commands.GotoPageCommand}" InputGestureText="{Binding Commands.GotoPageCommand.GestureText}"/>
+            </MenuItem>
+            <MenuItem Header="_Help">
+                <MenuItem Header="{Binding Commands.ShowAboutCommand.Name}" Command="{Binding Commands.ShowAboutCommand}"/>
+            </MenuItem>
+        </Menu>
+        <mpp:MoonPdfPanel Background="LightGray" ViewType="SinglePage" PageDisplay="ContinuousPages" PageBorderThickness="0,2,4,2" AllowDrop="True" x:Name="moonPdfPanel" x:FieldModifier="private"/>
+    </DockPanel>
+</Window>

@@ -1,0 +1,469 @@
+# nmake -f makefile.msvc
+# Arguments:
+# CFG=dbg|rel (default: dbg)
+# EXTDIR=<directory where zlib/freetype/jpeg lib live> (default: ..\ext)
+#  e.g. ..\sumatrapdf\ext
+# NASM=<path to nasm.exe> (default: nasm.exe)
+# PLATFORM=X86
+#  the PLATFORM var is usually set in the x64 and x64 cross tools Visual Studio command prompt
+#  note: building on X64 isn't officially supported and might unintentionally be broken
+
+# Set default configuration
+!if "$(CFG)"==""
+CFG=dbg
+!endif
+
+# O is directory where object and binary files go
+!if "$(O)"==""
+O = obj-$(CFG)-win
+!if "$(PLATFORM)"=="X64"
+O = $(O)64
+!endif
+!endif
+
+OZ  = $(O)\zlib
+OFT = $(O)\freetype
+OT  = $(O)\jpegturbo
+OOJ = $(O)\openjpeg
+OJB = $(O)\jbig2
+OFZ = $(O)\fitz
+OP  = $(O)\mupdf
+OX  = $(O)\muxps
+OA  = $(O)\muapps
+
+# To over-ride location of fitz/mupdf sources, define MUPDF_DIR
+# e.g.:
+#MUPDF_DIR=..\mupdf
+
+!if "$(MUPDF_DIR)"==""
+MUPDF_DIR=.
+!endif
+
+!if "$(EXTDIR)"==""
+EXTDIR=..\ext
+!endif
+
+ZLIB_DIR=$(EXTDIR)\zlib
+FREETYPE_DIR=$(EXTDIR)\freetype2
+JPEG_TURBO_DIR=$(EXTDIR)\libjpeg-turbo
+OPENJPEG_DIR=$(EXTDIR)\openjpeg
+JBIG2_DIR=$(EXTDIR)\jbig2dec
+MUPDF_GEN_DIR = $(MUPDF_DIR)\generated
+
+# full path to NASM can be passed in or we'll assume it's in PATH
+!if "$(NASM)"==""
+NASM=nasm.exe
+!endif
+
+CC = cl.exe
+
+# CFLGASB - CFLAGS base. 
+
+CFLAGSB = $(CFLAGSB) /nologo /c
+# standard windows defines
+!if "$(PLATFORM)"=="X64"
+CFLAGSB = $(CFLAGSB) /D "WIN64" /D "_WIN64"
+!endif
+# WIN32 means any Windows, not just 32-bit Windows
+CFLAGSB = $(CFLAGSB) /D "WIN32" /D "_WIN32"
+
+# /W3  : bump warnings level from 1 to 3
+# /WX  : treat warnings as errors
+# /GR- : disable RTTI
+# /Zi  : enable debug information
+# /GS  : enable security checks
+# /Gy  : separate functions for linker
+# /GF  : enable read-only string pooling
+CFLAGSB = $(CFLAGSB) /W3 /WX /GR- /Zi /GS /Gy /GF
+
+# /EHs-c- : disable C++ exceptions (generates smaller binaries)
+CFLAGSB = $(CFLAGSB) /EHs-c- 
+
+# /Ox  : maximum optimizations
+# /O2  : maximize speed
+# docs say /Ox better, my tests say /O2 better
+OPTLEVEL = /O2
+
+!if "$(CFG)"!="dbg"
+# /GL  : enable link-time code generation
+CFLAGS    = $(CFLAGSB) $(OPTLEVEL) /GL /D "NDEBUG"
+CFLAGSOPT = $(CFLAGSB) $(OPTLEVEL) /D "NDEBUG"
+LDFLAGS = $(LDFLAGS) /LTCG
+# /DYNAMICBASE and /NXCOMPAT for better protection against stack overflows
+# http://blogs.msdn.com/vcblog/archive/2009/05/21/dynamicbase-and-nxcompat.aspx
+# We don't use /NXCOMPAT because we need to turn it on/off at runtime
+LDFLAGS = $(LDFLAGS) /DYNAMICBASE /FIXED:NO
+!else
+# /MTd  : statically link debug crt (libcmtd.lib)
+CFLAGSB = $(CFLAGSB) /MTd
+# /RTCs : stack frame runtime checking
+# /RTCu : ununitialized local usage checks
+# /Od   : disable optimizations
+CFLAGS = $(CFLAGSB) /Od /RTCs /RTCu
+CFLAGSOPT = $(CFLAGSB) $(OPTLEVEL) /D "NDEBUG"
+!endif
+
+ZLIB_CFLAGS = $(CFLAGSOPT) /wd4996
+
+FREETYPE_CFLAGS = $(CFLAGSOPT) /TC /I$(FREETYPE_DIR)/config /I$(FREETYPE_DIR)/include \
+	/D "FT2_BUILD_LIBRARY" /D "FT_OPTION_AUTOFIT2" /wd4996
+
+JBIG2_CFLAGS = $(CFLAGS) /TC /D "HAVE_STRING_H=1" /I$(JBIG2_DIR) /wd4018 /wd4996
+
+OPENJPEG_CFLAGS = $(CFLAGS) /TC /D "OPJ_STATIC" /D "OPJ_EXPORTS" /I$(OPENJPEG_DIR) /wd4996
+
+JPEG_TURBO_CFLAGS = $(CFLAGS) /I$(JPEG_TURBO_DIR) /I$(JPEG_TURBO_DIR)\simd
+JPEG_TURBO_CFLAGS = $(JPEG_TURBO_CFLAGS) /wd4101 /wd4018 /wd4996
+JPEG_TURBO_NASM_FLAGS = -I $(JPEG_TURBO_DIR)\simd\ -I $(JPEG_TURBO_DIR)\win\ 
+!if "$(PLATFORM)"=="X64"
+JPEG_TURBO_NASM_FLAGS = $(JPEG_TURBO_NASM_FLAGS) -f win64 -D__x86_64__ -DWIN64 -DMSVC
+!else
+JPEG_TURBO_NASM_FLAGS = $(JPEG_TURBO_NASM_FLAGS) -f win32
+!endif
+
+MUPDF_CFLAGS = $(CFLAGS) /D "NEED_MATH" /D "NEED_GETTIMEOFDAY" /D "HAVE_JBIG2DEC" /D "USE_HINTING"
+
+MUPDF_CFLAGS = $(MUPDF_CFLAGS) /D "HAVE_OPENJPEG" /I$(OPENJPEG_DIR)
+
+MUPDF_CFLAGS = $(MUPDF_CFLAGS) \
+	/I$(MUPDF_DIR)/fitz /I$(MUPDF_DIR)/pdf /I$(MUPDF_DIR)/xps /I$(MUPDF_DIR)/cbz /I$(MUPDF_DIR)/apps \
+	/I$(FREETYPE_DIR)/config /I$(FREETYPE_DIR)/include /I$(ZLIB_DIR) \
+	/I$(JBIG2_DIR) /I$(JPEG_TURBO_DIR)
+
+!if "$(CFG)"=="dbg"
+MUPDF_CFLAGS = $(MUPDF_CFLAGS) /D "DEBUG"
+!endif
+
+!if "$(PLATFORM)"=="X64"
+# disable warning C4244: conversion from 'type1' to 'type2', possible loss of data
+#     and warning C4267: conversion from 'size_t' to 'type', possible loss of data
+FREETYPE_CFLAGS = $(FREETYPE_CFLAGS) /wd4244 /wd4267
+JBIG2_CFLAGS = $(JBIG2_CFLAGS) /wd4244 /wd4267
+OPENJPEG_CFLAGS = $(OPENJPEG_CFLAGS) /wd4244 /wd4267
+JPEG_TURBO_CFLAGS = $(JPEG_TURBO_CFLAGS) /wd4244 /wd4267
+MUPDF_CFLAGS  = $(MUPDF_CFLAGS) /wd4267
+!endif
+
+LIBS = $(LIBS) advapi32.lib kernel32.lib user32.lib gdi32.lib comdlg32.lib shell32.lib gdiplus.lib ole32.lib WindowsCodecs.lib
+
+LD = link.exe
+LDFLAGS = $(LDFLAGS) /nologo /DEBUG /RELEASE /opt:ref /opt:icf
+
+FT_OBJS = \
+	$(OFT)\ftbase.obj $(OFT)\ftbbox.obj $(OFT)\ftbitmap.obj $(OFT)\ftgasp.obj \
+	$(OFT)\ftglyph.obj $(OFT)\ftinit.obj $(OFT)\ftstroke.obj $(OFT)\ftsynth.obj \
+	$(OFT)\ftsystem.obj $(OFT)\fttype1.obj $(OFT)\ftxf86.obj $(OFT)\cff.obj \
+	$(OFT)\type1cid.obj $(OFT)\psaux.obj $(OFT)\psnames.obj $(OFT)\smooth.obj \
+	$(OFT)\sfnt.obj $(OFT)\truetype.obj $(OFT)\type1.obj $(OFT)\raster.obj \
+	$(OFT)\otvalid.obj $(OFT)\ftotval.obj $(OFT)\pshinter.obj
+!if "$(CFG)"=="dbg"
+FT_OBJS = $(FT_OBJS) $(OFT)\ftdebug.obj
+!endif
+
+ZLIB_OBJS = \
+	$(OZ)\adler32.obj $(OZ)\compress.obj $(OZ)\crc32.obj $(OZ)\deflate.obj \
+	$(OZ)\inffast.obj $(OZ)\inflate.obj $(OZ)\inftrees.obj $(OZ)\trees.obj \
+	$(OZ)\zutil.obj \
+	$(OZ)\gzlib.obj $(OZ)\gzread.obj $(OZ)\gzwrite.obj $(OZ)\gzclose.obj \
+	# MuPDF also compiles $(OZ)\uncompr.obj
+
+JPEG_TURBO_OBJS = \
+	$(OT)\jcomapi.obj $(OT)\jdapimin.obj $(OT)\jdapistd.obj \
+	$(OT)\jdatadst.obj $(OT)\jdatasrc.obj $(OT)\jdcoefct.obj $(OT)\jdcolor.obj $(OT)\jddctmgr.obj \
+	$(OT)\jdhuff.obj $(OT)\jdinput.obj $(OT)\jdmainct.obj $(OT)\jdmarker.obj $(OT)\jdmaster.obj \
+	$(OT)\jdmerge.obj $(OT)\jdpostct.obj $(OT)\jdsample.obj $(OT)\jdtrans.obj $(OT)\jerror.obj \
+	$(OT)\jfdctflt.obj $(OT)\jfdctint.obj $(OT)\jidctflt.obj $(OT)\jidctfst.obj $(OT)\jidctint.obj \
+	$(OT)\jquant1.obj $(OT)\jquant2.obj $(OT)\jutils.obj $(OT)\jmemmgr.obj $(OT)\jmemnobs.obj \
+	$(OT)\jaricom.obj $(OT)\jdarith.obj $(OT)\jfdctfst.obj $(OT)\jdphuff.obj $(OT)\jidctred.obj
+
+!if "$(PLATFORM)"=="X64"
+JPEG_TURBO_OBJS = $(JPEG_TURBO_OBJS) \
+	$(OT)\jfsseflt-64.obj $(OT)\jccolss2-64.obj $(OT)\jdcolss2-64.obj $(OT)\jcgrass2-64.obj \
+	$(OT)\jcsamss2-64.obj $(OT)\jdsamss2-64.obj $(OT)\jdmerss2-64.obj $(OT)\jcqnts2i-64.obj  \
+	$(OT)\jfss2fst-64.obj $(OT)\jfss2int-64.obj $(OT)\jiss2red-64.obj $(OT)\jiss2int-64.obj \
+	$(OT)\jiss2fst-64.obj $(OT)\jcqnts2f-64.obj $(OT)\jiss2flt-64.obj $(OT)\jsimd_x86_64.obj
+!else
+JPEG_TURBO_OBJS = $(JPEG_TURBO_OBJS) \
+	$(OT)\jsimdcpu.obj $(OT)\jccolmmx.obj $(OT)\jcgrammx.obj $(OT)\jdcolmmx.obj \
+	$(OT)\jcsammmx.obj $(OT)\jdsammmx.obj $(OT)\jdmermmx.obj $(OT)\jcqntmmx.obj \
+	$(OT)\jfmmxfst.obj $(OT)\jfmmxint.obj $(OT)\jimmxred.obj $(OT)\jimmxint.obj \
+	$(OT)\jimmxfst.obj $(OT)\jcqnt3dn.obj $(OT)\jf3dnflt.obj $(OT)\ji3dnflt.obj \
+	$(OT)\jcqntsse.obj $(OT)\jfsseflt.obj $(OT)\jisseflt.obj $(OT)\jccolss2.obj \
+	$(OT)\jcgrass2.obj $(OT)\jdcolss2.obj $(OT)\jcsamss2.obj $(OT)\jdsamss2.obj \
+	$(OT)\jdmerss2.obj $(OT)\jcqnts2i.obj $(OT)\jfss2fst.obj $(OT)\jfss2int.obj \
+	$(OT)\jiss2red.obj $(OT)\jiss2int.obj $(OT)\jiss2fst.obj $(OT)\jcqnts2f.obj \
+	$(OT)\jiss2flt.obj $(OT)\jsimd_i386.obj
+!endif
+
+JBIG2_OBJS = \
+	$(OJB)\jbig2.obj $(OJB)\jbig2_arith.obj $(OJB)\jbig2_arith_int.obj \
+	$(OJB)\jbig2_arith_iaid.obj $(OJB)\jbig2_huffman.obj $(OJB)\jbig2_segment.obj \
+	$(OJB)\jbig2_page.obj $(OJB)\jbig2_symbol_dict.obj $(OJB)\jbig2_text.obj \
+	$(OJB)\jbig2_generic.obj $(OJB)\jbig2_refinement.obj $(OJB)\jbig2_mmr.obj \
+	$(OJB)\jbig2_image.obj $(OJB)\jbig2_metadata.obj $(OJB)\jbig2_halftone.obj
+
+OPENJPEG_OBJS = \
+	$(OOJ)\bio.obj $(OOJ)\cio.obj $(OOJ)\dwt.obj $(OOJ)\event.obj $(OOJ)\image.obj \
+	$(OOJ)\j2k.obj $(OOJ)\j2k_lib.obj $(OOJ)\jp2.obj $(OOJ)\jpt.obj $(OOJ)\mct.obj \
+	$(OOJ)\mqc.obj $(OOJ)\openjpeg.obj $(OOJ)\pi.obj $(OOJ)\raw.obj $(OOJ)\t1.obj \
+	$(OOJ)\t2.obj $(OOJ)\tcd.obj $(OOJ)\tgt.obj $(OOJ)\cidx_manager.obj $(OOJ)\phix_manager.obj \
+	$(OOJ)\ppix_manager.obj $(OOJ)\thix_manager.obj $(OOJ)\tpix_manager.obj
+
+FITZ_DRAW_OBJS = \
+	$(OFZ)\draw_affine.obj $(OFZ)\draw_blend.obj $(OFZ)\draw_edge.obj \
+	$(OFZ)\draw_glyph.obj $(OFZ)\draw_mesh.obj $(OFZ)\draw_paint.obj $(OFZ)\draw_path.obj \
+	$(OFZ)\draw_scale.obj $(OFZ)\draw_unpack.obj $(OFZ)\draw_device.obj
+
+FITZ_OBJS = \
+	$(OFZ)\base_error.obj $(OFZ)\base_geometry.obj $(OFZ)\base_getopt.obj $(OFZ)\base_hash.obj \
+	$(OFZ)\base_memory.obj $(OFZ)\base_string.obj $(OFZ)\base_time.obj $(OFZ)\base_trans.obj \
+	$(OFZ)\base_context.obj $(OFZ)\base_xml.obj $(OFZ)\crypt_sha2.obj $(OFZ)\dev_gdiplus.obj \
+	$(OFZ)\dev_bbox.obj $(OFZ)\dev_list.obj $(OFZ)\dev_null.obj $(OFZ)\dev_text.obj \
+	$(OFZ)\dev_trace.obj $(OFZ)\crypt_aes.obj $(OFZ)\crypt_arc4.obj $(OFZ)\crypt_md5.obj \
+	$(OFZ)\doc_document.obj $(OFZ)\doc_interactive.obj $(OFZ)\doc_link.obj $(OFZ)\doc_outline.obj $(OFZ)\doc_search.obj \
+	$(OFZ)\filt_basic.obj $(OFZ)\filt_faxd.obj $(OFZ)\filt_flate.obj $(OFZ)\filt_jbig2d.obj \
+	$(OFZ)\filt_dctd.obj $(OFZ)\filt_lzwd.obj $(OFZ)\filt_predict.obj $(OFZ)\res_store.obj \
+	$(OFZ)\image_jpeg.obj $(OFZ)\image_jpx.obj $(OFZ)\image_png.obj $(OFZ)\image_tiff.obj \
+	$(OFZ)\res_path.obj $(OFZ)\res_pixmap.obj $(OFZ)\res_text.obj $(OFZ)\res_bitmap.obj \
+	$(OFZ)\res_colorspace.obj $(OFZ)\res_font.obj $(OFZ)\res_shade.obj $(OFZ)\res_halftone.obj \
+	$(OFZ)\stm_buffer.obj $(OFZ)\stm_comp_buf.obj $(OFZ)\stm_open.obj $(OFZ)\stm_read.obj \
+	$(OFZ)\image_md5.obj $(OFZ)\image_save.obj $(OFZ)\image_jxr.obj
+
+MUPDF_OBJS = \
+	$(OP)\pdf_object.obj $(OP)\pdf_annot.obj $(OP)\pdf_cmap.obj $(OP)\pdf_store.obj \
+	$(OP)\pdf_colorspace.obj $(OP)\pdf_crypt.obj $(OP)\pdf_encoding.obj \
+	$(OP)\pdf_font.obj $(OP)\pdf_fontfile.obj $(OP)\pdf_metrics.obj \
+	$(OP)\pdf_function.obj $(OP)\pdf_image.obj $(OP)\pdf_interpret.obj $(OP)\pdf_lex.obj \
+	$(OP)\pdf_nametree.obj $(OP)\pdf_outline.obj $(OP)\pdf_page.obj \
+	$(OP)\pdf_parse.obj $(OP)\pdf_pattern.obj $(OP)\pdf_repair.obj $(OP)\pdf_shade.obj \
+	$(OP)\pdf_stream.obj $(OP)\pdf_type3.obj $(OP)\pdf_unicode.obj \
+	$(OP)\pdf_xobject.obj $(OP)\pdf_xref.obj $(OP)\pdf_xref_aux.obj \
+	$(OP)\pdf_cmap_load.obj $(OP)\pdf_cmap_parse.obj $(OP)\pdf_cmap_table.obj \
+	$(OP)\pdf_write.obj $(OP)\pdf_form.obj $(OP)\pdf_event.obj $(OP)\pdf_js_none.obj \
+	$(OP)\pdf_ft_tools.obj
+
+MUXPS_OBJS = \
+	$(OX)\xps_common.obj $(OX)\xps_doc.obj $(OX)\xps_glyphs.obj $(OX)\xps_gradient.obj \
+	$(OX)\xps_image.obj $(OX)\xps_path.obj $(OX)\xps_resource.obj $(OX)\xps_tile.obj \
+	$(OX)\xps_util.obj $(OX)\xps_zip.obj $(OX)\xps_outline.obj
+
+MUCBZ_OBJS = \
+	$(OX)\mucbz.obj
+
+# Make it easy to compile in a CJK fallback font and/or the Droid substitution fonts
+!if "$(WITHCJKFONT)"==""
+MUPDF_CFLAGS = $(MUPDF_CFLAGS) /D "NOCJKFONT"
+!endif
+!if "$(WITHDROIDFONT)"==""
+MUPDF_CFLAGS = $(MUPDF_CFLAGS) /D "NODROIDFONT"
+!endif
+
+LIBS_OBJS = \
+	$(ZLIB_OBJS) \
+	$(FT_OBJS) \
+	$(JPEG_TURBO_OBJS) \
+	$(JBIG2_OBJS) \
+	$(OPENJPEG_OBJS) \
+	$(FITZ_DRAW_OBJS) \
+	$(FITZ_OBJS) \
+	$(MUPDF_OBJS) \
+	$(MUXPS_OBJS) \
+	$(MUCBZ_OBJS)
+
+MUAPPS_OBJS = \
+	$(OA)\win_main.obj $(OA)\pdfapp.obj $(OA)\mudraw.obj $(OA)\pdfshow.obj \
+	$(OA)\pdfclean.obj $(OA)\pdfinfo.obj $(OA)\pdfextract.obj $(OA)\pdfposter.obj
+
+PDFAPP_RES = $(OA)\pdfview.res
+PDFAPP_OBJS = $(LIBS_OBJS) $(OA)\win_main.obj $(OA)\pdfapp.obj $(PDFAPP_RES)
+PDFAPP_APP = $(O)\pdfview.exe
+
+MUTOOL_OBJS = $(LIBS_OBJS) $(OA)\mutool.obj $(OA)\pdfshow.obj \
+	$(OA)\pdfclean.obj $(OA)\pdfinfo.obj $(OA)\pdfextract.obj $(OA)\pdfposter.obj
+MUTOOL_APP = $(O)\mutool.exe
+
+MUDRAW_OBJS = $(LIBS_OBJS) $(OA)\mudraw.obj
+MUDRAW_APP = $(O)\mudraw.exe
+
+FONTDUMP_OBJS = $(OP)\fontdump.obj
+FONTDUMP_APP = $(O)\fontdump.exe
+
+all: $(O) $(MUDRAW_APP) $(MUTOOL_APP) $(PDFAPP_APP)
+
+clean: force
+	-rmdir /S /Q $(O) $(MUPDF_GEN_DIR)
+
+## Note: the following command does not work on Windows
+cleanall: force
+	-rmdir /S /Q obj-*-win $(MUPDF_GEN_DIR)
+
+$(O): force
+	@if not exist $(O) mkdir $(O)
+	@if not exist $(OZ) mkdir $(OZ)
+	@if not exist $(OFT) mkdir $(OFT)
+	@if not exist $(OT) mkdir $(OT)
+	@if not exist $(OOJ) mkdir $(OOJ)
+	@if not exist $(OJB) mkdir $(OJB)
+	@if not exist $(OFZ) mkdir $(OFZ)
+	@if not exist $(OP) mkdir $(OP)
+	@if not exist $(OX) mkdir $(OX)
+	@if not exist $(OA) mkdir $(OA)
+
+$(PDFAPP_RES): $(MUPDF_DIR)\apps\win_res.rc
+	rc /r /fo$@ $(MUPDF_DIR)\apps\win_res.rc
+
+$(FONTDUMP_APP): $(FONTDUMP_OBJS)
+	$(LD) $(LDFLAGS) $** $(LIBS) /PDB:$*.pdb /OUT:$@ /SUBSYSTEM:CONSOLE
+
+$(MUTOOL_APP): $(MUTOOL_OBJS)
+	$(LD) $(LDFLAGS) $** $(LIBS) /PDB:$*.pdb /OUT:$@ /SUBSYSTEM:CONSOLE
+
+$(PDFAPP_APP): $(PDFAPP_OBJS)
+	$(LD) $(LDFLAGS) $** $(LIBS) /PDB:$*.pdb /OUT:$@ /SUBSYSTEM:WINDOWS
+
+$(MUDRAW_APP): $(MUDRAW_OBJS)
+	$(LD) $(LDFLAGS) $** $(LIBS) /PDB:$*.pdb /OUT:$@ /SUBSYSTEM:CONSOLE
+
+# freetype directories
+{$(FREETYPE_DIR)\builds\win32}.c{$(OFT)}.obj::
+	$(CC) $(FREETYPE_CFLAGS) /Fo$(OFT)\ /Fd$(O)\vc80.pdb $<
+
+{$(FREETYPE_DIR)\builds\unix}.c{$(OFT)}.obj::
+	$(CC) $(FREETYPE_CFLAGS) /Fo$(OFT)\ /Fd$(O)\vc80.pdb $<
+
+{$(FREETYPE_DIR)\src\autofit}.c{$(OFT)}.obj::
+	$(CC) $(FREETYPE_CFLAGS) /Fo$(OFT)\ /Fd$(O)\vc80.pdb $<
+
+{$(FREETYPE_DIR)\src\base}.c{$(OFT)}.obj::
+	$(CC) $(FREETYPE_CFLAGS) /Fo$(OFT)\ /Fd$(O)\vc80.pdb $<
+
+{$(FREETYPE_DIR)\src\bdf}.c{$(OFT)}.obj::
+	$(CC) $(FREETYPE_CFLAGS) /Fo$(OFT)\ /Fd$(O)\vc80.pdb $<
+
+{$(FREETYPE_DIR)\src\cache}.c{$(OFT)}.obj::
+	$(CC) $(FREETYPE_CFLAGS) /Fo$(OFT)\ /Fd$(O)\vc80.pdb $<
+
+{$(FREETYPE_DIR)\src\cff}.c{$(OFT)}.obj::
+	$(CC) $(FREETYPE_CFLAGS) /Fo$(OFT)\ /Fd$(O)\vc80.pdb $<
+
+{$(FREETYPE_DIR)\src\cid}.c{$(OFT)}.obj::
+	$(CC) $(FREETYPE_CFLAGS) /Fo$(OFT)\ /Fd$(O)\vc80.pdb $<
+
+{$(FREETYPE_DIR)\src\gxvalid}.c{$(OFT)}.obj::
+	$(CC) $(FREETYPE_CFLAGS) /Fo$(OFT)\ /Fd$(O)\vc80.pdb $<
+
+{$(FREETYPE_DIR)\src\gzip}.c{$(OFT)}.obj::
+	$(CC) $(FREETYPE_CFLAGS) /Fo$(OFT)\ /Fd$(O)\vc80.pdb $<
+
+{$(FREETYPE_DIR)\src\lzw}.c{$(OFT)}.obj::
+	$(CC) $(FREETYPE_CFLAGS) /Fo$(OFT)\ /Fd$(O)\vc80.pdb $<
+
+{$(FREETYPE_DIR)\src\otvalid}.c{$(OFT)}.obj::
+	$(CC) $(FREETYPE_CFLAGS) /Fo$(OFT)\ /Fd$(O)\vc80.pdb $<
+
+{$(FREETYPE_DIR)\src\pcf}.c{$(OFT)}.obj::
+	$(CC) $(FREETYPE_CFLAGS) /Fo$(OFT)\ /Fd$(O)\vc80.pdb $<
+
+{$(FREETYPE_DIR)\src\pfr}.c{$(OFT)}.obj::
+	$(CC) $(FREETYPE_CFLAGS) /Fo$(OFT)\ /Fd$(O)\vc80.pdb $<
+
+{$(FREETYPE_DIR)\src\psaux}.c{$(OFT)}.obj::
+	$(CC) $(FREETYPE_CFLAGS) /Fo$(OFT)\ /Fd$(O)\vc80.pdb $<
+
+{$(FREETYPE_DIR)\src\pshinter}.c{$(OFT)}.obj::
+	$(CC) $(FREETYPE_CFLAGS) /Fo$(OFT)\ /Fd$(O)\vc80.pdb $<
+
+{$(FREETYPE_DIR)\src\psnames}.c{$(OFT)}.obj::
+	$(CC) $(FREETYPE_CFLAGS) /Fo$(OFT)\ /Fd$(O)\vc80.pdb $<
+
+{$(FREETYPE_DIR)\src\raster}.c{$(OFT)}.obj::
+	$(CC) $(FREETYPE_CFLAGS) /Fo$(OFT)\ /Fd$(O)\vc80.pdb $<
+
+{$(FREETYPE_DIR)\src\sfnt}.c{$(OFT)}.obj::
+	$(CC) $(FREETYPE_CFLAGS) /Fo$(OFT)\ /Fd$(O)\vc80.pdb $<
+
+{$(FREETYPE_DIR)\src\smooth}.c{$(OFT)}.obj::
+	$(CC) $(FREETYPE_CFLAGS) /Fo$(OFT)\ /Fd$(O)\vc80.pdb $<
+
+{$(FREETYPE_DIR)\src\truetype}.c{$(OFT)}.obj::
+	$(CC) $(FREETYPE_CFLAGS) /Fo$(OFT)\ /Fd$(O)\vc80.pdb $<
+
+{$(FREETYPE_DIR)\src\type1}.c{$(OFT)}.obj::
+	$(CC) $(FREETYPE_CFLAGS) /Fo$(OFT)\ /Fd$(O)\vc80.pdb $<
+
+{$(FREETYPE_DIR)\src\type42}.c{$(OFT)}.obj::
+	$(CC) $(FREETYPE_CFLAGS) /Fo$(OFT)\ /Fd$(O)\vc80.pdb $<
+
+{$(FREETYPE_DIR)\src\winfonts}.c{$(OFT)}.obj::
+	$(CC) $(FREETYPE_CFLAGS) /Fo$(OFT)\ /Fd$(O)\vc80.pdb $<
+
+{$(ZLIB_DIR)}.c{$(OZ)}.obj::
+	$(CC) $(ZLIB_CFLAGS) /Fo$(OZ)\ /Fd$(O)\vc80.pdb $<
+
+{$(JPEG_TURBO_DIR)}.c{$(OT)}.obj::
+	$(CC) $(JPEG_TURBO_CFLAGS) /Fo$(OT)\ /Fd$(O)\vc80.pdb $<
+
+{$(JPEG_TURBO_DIR)\simd}.c{$(OT)}.obj::
+	$(CC) $(JPEG_TURBO_CFLAGS) /Fo$(OT)\ /Fd$(O)\vc80.pdb $<
+
+{$(JPEG_TURBO_DIR)\simd}.asm{$(OT)}.obj:
+	$(NASM) $(JPEG_TURBO_NASM_FLAGS) -o $@ $< 
+
+{$(OPENJPEG_DIR)}.c{$(OOJ)}.obj::
+	$(CC) $(OPENJPEG_CFLAGS) /Fo$(OOJ)\ /Fd$(O)\vc80.pdb $<
+
+{$(JBIG2_DIR)}.c{$(OJB)}.obj::
+	$(CC) $(JBIG2_CFLAGS) /Fo$(OJB)\ /Fd$(O)\vc80.pdb $<
+
+{$(MUPDF_DIR)\apps}.c{$(OA)}.obj::
+	$(CC) /TC $(MUPDF_CFLAGS) /Fo$(OA)\ /Fd$(O)\vc80.pdb $<
+
+{$(MUPDF_DIR)\pdf}.c{$(OP)}.obj::
+	$(CC) /TC $(MUPDF_CFLAGS) /Fo$(OP)\ /Fd$(O)\vc80.pdb $<
+
+{$(MUPDF_DIR)\xps}.c{$(OX)}.obj::
+	$(CC) /TC $(MUPDF_CFLAGS) /Fo$(OX)\ /Fd$(O)\vc80.pdb $<
+
+{$(MUPDF_DIR)\cbz}.c{$(OX)}.obj::
+	$(CC) /TC $(MUPDF_CFLAGS) /Fo$(OX)\ /Fd$(O)\vc80.pdb $<
+
+{$(MUPDF_DIR)\draw}.c{$(OFZ)}.obj::
+	$(CC) /TC $(MUPDF_CFLAGS) /Fo$(OFZ)\ /Fd$(O)\vc80.pdb $<
+
+{$(MUPDF_DIR)\fitz}.c{$(OFZ)}.obj::
+	$(CC) /TC $(MUPDF_CFLAGS) /Fo$(OFZ)\ /Fd$(O)\vc80.pdb $<
+
+{$(MUPDF_DIR)\fitz}.cpp{$(OFZ)}.obj::
+	$(CC) $(MUPDF_CFLAGS) /Fo$(OFZ)\ /Fd$(O)\vc80.pdb $<
+
+# files that might have to be generated first:
+
+MUPDF_CMAP_TABLES = $(MUPDF_GEN_DIR)\cmap_cns.h $(MUPDF_GEN_DIR)\cmap_gb.h \
+	$(MUPDF_GEN_DIR)\cmap_japan.h $(MUPDF_GEN_DIR)\cmap_korea.h
+
+MUPDF_FONT_FILES = $(MUPDF_GEN_DIR)\font_base14.h $(MUPDF_GEN_DIR)\font_droid.h \
+	$(MUPDF_GEN_DIR)\font_cjk.h $(MUPDF_GEN_DIR)\font_cjk_full.h	
+
+MUPDF_GENERATED =  $(MUPDF_CMAP_TABLES) $(MUPDF_FONT_FILES) $(MUPDF_GEN_DIR)\js_util.h
+
+$(MUPDF_GENERATED):
+	cd $(MUPDF_DIR) && win32\generate.bat
+
+$(OP)\pdf_cmap_tables.obj: $(MUPDF_CMAP_TABLES)
+$(OP)\pdf_fontfile.obj: $(MUPDF_FONT_FILES)
+$(OP)\pdf_js.obj: $(MUPDF_GEN_DIR)\js_util.h
+
+# header dependencies
+
+FITZ_H  = $(MUPDF_DIR)\fitz\fitz.h $(MUPDF_DIR)\fitz\fitz-internal.h
+MUPDF_H = $(MUPDF_DIR)\pdf\mupdf.h $(MUPDF_DIR)\pdf\mupdf-internal.h
+MUXPS_H = $(MUPDF_DIR)\xps\muxps.h
+MUCBZ_H = $(MUPDF_DIR)\cbz\mucbz.h
+
+$(FITZ_OBJS) $(FITZ_DRAW_OBJS): $(FITZ_H)
+$(MUPDF_OBJS) $(CMAP_OBJS): $(FITZ_H) $(MUPDF_H)
+$(MUXPS_OBJS): $(FITZ_H) $(MUXPS_H)
+$(MUCBZ_OBJS): $(FITZ_H) $(MUCBZ_H)
+$(MUAPPS_OBJS): $(FITZ_H) $(MUPDF_H) $(MUXPS_H) $(MUCBZ_H)
+
+force: ;

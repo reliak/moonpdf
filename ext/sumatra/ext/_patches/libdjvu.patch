@@ -1,0 +1,106 @@
+diff -rPu5 libdjvu.orig\ddjvuapi.cpp libdjvu\ddjvuapi.cpp
+--- libdjvu.orig\ddjvuapi.cpp	Tue May 08 03:56:53 2012
++++ libdjvu\ddjvuapi.cpp	Sun Dec 16 14:55:00 2012
+@@ -3841,10 +3841,12 @@
+             {
+               if (file->get_flags() & DjVuFile::STOPPED)
+                 return miniexp_status(DDJVU_JOB_STOPPED);
+               return miniexp_status(DDJVU_JOB_FAILED);
+             }
++          /* SumatraPDF: TODO: how to prevent a potentially infinite loop? */
++          return miniexp_status(DDJVU_JOB_FAILED);
+         }
+       return miniexp_dummy;
+     }
+   // Access annotation data
+   return get_bytestream_anno(file->get_merged_anno());
+diff -rPu5 libdjvu.orig\DjVuGlobal.h libdjvu\DjVuGlobal.h
+--- libdjvu.orig\DjVuGlobal.h	Tue May 08 03:56:53 2012
++++ libdjvu\DjVuGlobal.h	Sat Aug 18 19:12:12 2012
+@@ -70,11 +70,12 @@
+ # include <new>
+ #else
+ # include <new.h>
+ #endif
+ 
+-#ifdef WIN32
++// SumatraPDF: allow to build as a static library (built-in)
++#ifdef WIN32_AND_NOT_STATIC
+ # ifdef DLL_EXPORT
+ #  define DJVUAPI __declspec(dllexport)
+ # else
+ #  define DJVUAPI __declspec(dllimport)
+ # endif
+diff -rPu5 libdjvu.orig\GThreads.h libdjvu\GThreads.h
+--- libdjvu.orig\GThreads.h	Tue May 08 03:56:53 2012
++++ libdjvu\GThreads.h	Sat Aug 18 19:17:23 2012
+@@ -105,10 +105,13 @@
+ #include "GException.h"
+ 
+ #define NOTHREADS     0
+ #define POSIXTHREADS  10
+ #define WINTHREADS    11
++/* SumatraPDF: prevent these constants from being confused with NOTHREADS */
++#define MACTHREADS    -1
++#define COTHREADS     -1
+ 
+ // Known platforms
+ #ifndef THREADMODEL
+ #if defined(WIN32)
+ #define THREADMODEL WINTHREADS
+diff -rPu5 libdjvu.orig\GURL.cpp libdjvu\GURL.cpp
+--- libdjvu.orig\GURL.cpp	Tue May 08 03:56:53 2012
++++ libdjvu\GURL.cpp	Sun Dec 16 12:16:34 2012
+@@ -482,11 +482,11 @@
+ GURL::protocol(const GUTF8String& url)
+ {
+   const char * const url_ptr=url;
+   const char * ptr=url_ptr;
+   for(char c=*ptr;
+-      c && (isalnum(c) || c == '+' || c == '-' || c == '.');
++      c && (isalnum((unsigned char)c) || c == '+' || c == '-' || c == '.');
+       c=*(++ptr)) EMPTY_LOOP;
+   if (ptr[0]==colon && ptr[1]=='/' && ptr[2]=='/')
+     return GUTF8String(url_ptr, ptr-url_ptr);
+   return GUTF8String();
+ }
+diff -rPu5 libdjvu.orig\miniexp.cpp libdjvu\miniexp.cpp
+--- libdjvu.orig\miniexp.cpp	Tue May 08 03:56:53 2012
++++ libdjvu\miniexp.cpp	Sat Aug 18 19:13:23 2012
+@@ -899,11 +899,12 @@
+ }
+ 
+ int 
+ miniexp_stringp(miniexp_t p)
+ {
+-  return miniexp_isa(p, ministring_t::classname) ? 1 : 0;
++  // SumatraPDF: don't execute code until asked to
++  return miniexp_isa(p, miniexp_symbol("string")) ? 1 : 0;
+ }
+ 
+ const char *
+ miniexp_to_str(miniexp_t p)
+ {
+diff -rPu5 libdjvu.orig\miniexp.h libdjvu\miniexp.h
+--- libdjvu.orig\miniexp.h	Tue May 08 03:56:53 2012
++++ libdjvu\miniexp.h	Sat Aug 18 19:14:08 2012
+@@ -679,15 +679,16 @@
+   public: static const miniexp_t classname; \
+           virtual miniexp_t classof() const; \
+           virtual bool isa(miniexp_t) const; 
+ 
+ #define MINIOBJ_IMPLEMENT(cls, supercls, name)\
+-  const miniexp_t cls::classname = miniexp_symbol(name);\
++  /* SumatraPDF: don't execute code until asked to */\
++  const miniexp_t cls::classname = 0;\
+   miniexp_t cls::classof() const {\
+-    return cls::classname; }\
++    return miniexp_symbol(name); }\
+   bool cls::isa(miniexp_t n) const {\
+-    return (cls::classname==n) || (supercls::isa(n)); }
++    return (classof()==n) || (supercls::isa(n)); }
+ 
+ 
+ /* miniexp_to_obj --
+    Returns a pointer to the object represented by an lisp
+    expression. Returns NULL if the expression is not an

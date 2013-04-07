@@ -1,0 +1,12 @@
+﻿<Window x:Class="MoonPdf.GotoPageDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Goto page..." Height="60" Width="220" WindowStartupLocation="CenterScreen" ResizeMode="NoResize" Background="LightGray" WindowStyle="ToolWindow">
+    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Center">
+        <TextBox x:Name="txtPage" Width="32"></TextBox>
+        <Label Content="of"></Label>
+        <Label x:Name="lblMaxPageNumber"></Label>
+        <Button Content="Ok" Width="50" Click="Button_Click_1" Margin="0,0,4,0" IsDefault="True"></Button>
+        <Button Content="Cancel" Width="50" Click="Button_Click_2" IsCancel="True"></Button>
+    </StackPanel>
+</Window>

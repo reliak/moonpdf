@@ -1,0 +1,347 @@
+# nmake -f makefile.msvc
+# Arguments:
+# CFG=dbg|rel (default: dbg)
+# EXTDIR=<directory where zlib/freetype/jpeg lib live> (default: ext)
+#  e.g. ..\sumatrapdf\ext
+# EXTCFLAGS=$CFLAGS
+# MUPDF_DIR=mupdf
+# PLATFORM=X86
+#   the PLATFORM var is usually set in the x64 and x64 cross tools Visual Studio command prompt
+#   note: building on X64 isn't officially supported and might unintentionally be broken
+#WITH_ANALYZE=yes
+#   use /analyze for all code
+
+# Set default configuration
+!if "$(CFG)"==""
+CFG=dbg
+!endif
+
+# O is directory where object and binary files go
+O = obj-$(CFG)
+
+# for x86 : obj-dbg and obj-rel ; for x64 : obj-dbg64 and obj-rel64
+!if "$(PLATFORM)"=="X64"
+O = $(O)64
+!endif
+
+!if "$(MUPDF_DIR)"==""
+MUPDF_DIR=mupdf
+!endif
+
+!if "$(EXTDIR)"==""
+EXTDIR=ext
+!endif
+
+# default target
+all_sumatrapdf: SumatraPDF Uninstaller PDFFilter PdfPreview BrowserPlugin EngineDump
+
+##### add configuration changes that should also affect MuPDF before this line #####
+
+!INCLUDE $(MUPDF_DIR)\makefile.msvc
+
+##### add configuration changes that should NOT affect MuPDF after this line #####
+
+# some libraries require stdint.h
+CFLAGS = $(CFLAGS) /Isrc/utils/msvc
+CFLAGSOPT = $(CFLAGSOPT) /Isrc/utils/msvc
+
+# include build data for the remaining third-party libraries
+!INCLUDE $(EXTDIR)\makefile.msvc
+
+# Modify the following defines if you have to target a platform prior to the ones specified below.
+# Their meaning: http://msdn.microsoft.com/en-us/library/aa383745(VS.85).aspx
+# and http://blogs.msdn.com/oldnewthing/archive/2007/04/11/2079137.aspx
+# We set the features uniformly to Windows 2000 or later.
+CFLAGS = $(CFLAGS) /D "WINVER=0x0500" /D "_WIN32_WINNT=0x0500"
+# Suppress warning C4800: forcing value to bool 'true' or 'false'
+CFLAGS = $(CFLAGS) /wd4800
+
+!if "$(WITH_ANALYZE)"=="yes"
+CFLAGS = /analyze:WX- $(CFLAGS)
+# suppress warning C6211: Leaking memory 'foo' due to an exception
+# TODO: verify that new doesn't throw
+CFLAGS = $(CFLAGS) /wd6211
+!endif
+
+!if "$(CFG)"=="dbg"
+CFLAGS = $(CFLAGS)  /D "DEBUG" /D "_DEBUG"
+!endif
+
+SUMATRA_CFLAGS = $(CFLAGS) $(EXTCFLAGS) \
+	/Isrc/utils /Isrc/utils/msvc /Isrc/mui /I$(MUPDF_DIR)\fitz /I$(MUPDF_DIR)\pdf \
+	/I$(MUPDF_DIR)\xps /Isrc /I$(EXTDIR)/synctex /I$(ZLIB_DIR) \
+	/I$(ZLIB_DIR)/minizip /I$(EXTDIR)/libdjvu /I$(EXTDIR)/CHMLib/src
+
+INSTALLER_CFLAGS = $(CFLAGS) $(EXTCFLAGS) \
+	/Isrc/utils /Isrc/utils/msvc /Isrc /Isrc/installer /I$(ZLIB_DIR) /I$(ZLIB_DIR)/minizip
+
+UNINSTALLER_CFLAGS = $(CFLAGS) $(EXTCFLAGS) \
+	/Isrc/utils /Isrc/utils/msvc /Isrc /Isrc/installer \
+	/D "BUILD_UNINSTALLER"
+
+RC_FLAGS = $(EXTCFLAGS)
+!if "$(CFG)"=="dbg"
+RC_FLAGS = $(RC_FLAGS) /D "DEBUG" /D "_DEBUG"
+!endif
+
+LIBS = $(LIBS) \
+	comctl32.lib Msimg32.lib Winspool.lib wininet.lib \
+	ole32.lib OleAut32.lib shlwapi.lib version.lib \
+	WindowsCodecs.lib
+
+OS   = $(O)\sumatrapdf
+OU   = $(O)\utils
+ODLL = $(O)\applibs
+OMUI = $(O)\mui
+OM   = $(O)\memtrace
+
+SUMATRA_APP = $(O)\SumatraPDF.exe
+SUMATRA_APP_NO_MUPDF = $(O)\SumatraPDF-no-MuPDF.exe
+SUMATRA_RES = $(OS)\sumatrapdf.res
+
+INSTALLER_APP   = $(O)\Installer.exe
+INSTALLER_RES   = $(OS)\Installer.res
+UNINSTALLER_APP = $(O)\uninstall.exe
+UNINSTALLER_RES = $(OS)\Uninstaller.res
+
+PDFFILTER_DLL = $(O)\PdfFilter.dll
+PDFFILTER_RES = $(ODLL)\PdfFilter.res
+PDFFILTER_CFLAGS = $(SUMATRA_CFLAGS)
+
+LIBMUPDF_LIB = $(O)\libmupdf.lib
+LIBMUPDF_DEF = src\libmupdf.def
+LIBMUPDF_DLL = $(O)\libmupdf.dll
+LIBMUPDF_RES = $(O)\libmupdf.res
+
+PDFPREVIEW_DLL = $(O)\PdfPreview.dll
+PDFPREVIEW_RES = $(ODLL)\PdfPreview.res
+PDFPREVIEW_CFLAGS = $(SUMATRA_CFLAGS)
+
+MEMTRACE_DLL = $(O)\memtrace.dll
+MEMTRACE_RES = $(ODLL)\memtrace.res
+MEMTRACE_CFLAGS = $(SUMATRA_CFLAGS)
+
+BROWSER_PLUGIN = $(O)\npPdfViewer.dll
+BROWSER_PLUGIN_RES = $(ODLL)\npPdfViewer.res
+BROWSER_PLUGIN_CFLAGS = $(CFLAGS) /Isrc/utils /Isrc/utils/msvc
+
+ENGINEDUMP_APP = $(O)\EngineDump.exe
+
+UTILS_OBJS = \
+	$(OU)\BencUtil.obj $(OU)\FileUtil.obj $(OU)\HttpUtil.obj \
+	$(OU)\StrUtil.obj $(OU)\UtilTests.obj $(OU)\WinUtil.obj \
+	$(OU)\DialogSizer.obj $(OU)\FileTransactions.obj $(OU)\Touch.obj \
+	$(OU)\TrivialHtmlParser.obj $(OU)\HtmlWindow.obj $(OU)\GdiPlusUtil.obj \
+	$(OU)\DirIter.obj $(OU)\BitReader.obj $(OU)\HtmlPullParser.obj \
+	$(OU)\HtmlPrettyPrint.obj $(OU)\ThreadUtil.obj $(OU)\DebugLog.obj \
+	$(OU)\DbgHelpDyn.obj $(OU)\JsonParser.obj $(OU)\TgaReader.obj \
+	$(OU)\HtmlParserLookup.obj $(OU)\ByteOrderDecoder.obj $(OU)\CmdLineParser.obj \
+	$(OU)\UITask.obj $(OU)\StrFormat.obj $(OU)\Dict.obj $(OU)\BaseUtil.obj
+
+!if "$(CFG)"=="dbg"
+UTILS_OBJS = $(UTILS_OBJS) $(OU)\Experiments.obj
+!endif
+
+# requires either MuPDF/libmupdf or $(ZLIB_OBJS)
+ZIP_OBJS = \
+	$(OU)\ZipUtil.obj $(MINIZIP_OBJS) $(BZIP2_OBJS)
+
+MUI_OBJS = \
+	$(OMUI)\MuiBase.obj $(OMUI)\Mui.obj $(OMUI)\MuiCss.obj $(OMUI)\MuiLayout.obj \
+	$(OMUI)\MuiPainter.obj $(OMUI)\MuiControl.obj $(OMUI)\MuiButton.obj \
+	$(OMUI)\MuiScrollBar.obj $(OMUI)\MuiEventMgr.obj $(OMUI)\MuiHwndWrapper.obj \
+	$(OMUI)\MuiGrid.obj $(OMUI)\SvgPath.obj
+
+ENGINE_OBJS = \
+	$(OS)\PdfEngine.obj $(OS)\PsEngine.obj \
+	$(OS)\ImagesEngine.obj $(ZIP_OBJS) $(UNRAR_OBJS) \
+	$(OS)\DjVuEngine.obj $(DJVU_OBJS) \
+	$(OS)\ChmEngine.obj $(OS)\ChmDoc.obj $(CHMLIB_OBJS) \
+	$(OS)\EbookEngine.obj $(OS)\EbookDoc.obj
+
+EBOOK_OBJS = \
+	$(OS)\MobiDoc.obj $(OU)\PdbReader.obj $(OS)\HtmlFormatter.obj $(OS)\EbookFormatter.obj \
+	$(OS)\EbookControls.obj $(OS)\EbookController.obj $(OS)\EbookWindow.obj
+
+SUMATRA_OBJS = \
+	$(OS)\AppPrefs.obj $(OS)\DisplayModel.obj $(OS)\CrashHandler.obj $(OS)\Doc.obj \
+	$(OS)\Favorites.obj $(OS)\TextSearch.obj $(OS)\SumatraAbout.obj $(OS)\SumatraAbout2.obj \
+	$(OS)\SumatraDialogs.obj $(OS)\SumatraProperties.obj \
+	$(OS)\SumatraPDF.obj $(OS)\translations.obj $(OS)\FileWatch.obj \
+	$(OS)\PdfSync.obj $(OS)\RenderCache.obj $(OS)\TextSelection.obj \
+	$(OS)\WindowInfo.obj $(OS)\ParseCommandLine.obj $(OS)\StressTesting.obj \
+	$(OS)\UnitTests.obj $(OS)\AppTools.obj $(OS)\TableOfContents.obj \
+	$(OS)\Toolbar.obj $(OS)\Print.obj $(OS)\Notifications.obj \
+	$(OS)\Search.obj $(OS)\Menu.obj $(OS)\ExternalPdfViewer.obj \
+	$(OS)\Selection.obj $(SUMATRA_RES) \
+	$(OS)\Tester.obj \
+	$(OS)\Regress.obj \
+	$(UTILS_OBJS) $(ENGINE_OBJS) $(SYNCTEX_OBJS) $(EBOOK_OBJS) $(MUI_OBJS) \
+
+INSTALLER_OBJS = \
+	$(OS)\Installer.obj $(INSTALLER_RES) $(OS)\CrashHandler.obj \
+	$(UTILS_OBJS) $(ZIP_OBJS) $(ZLIB_OBJS)
+
+UNINSTALLER_OBJS = \
+	$(OS)\Uninstaller.obj $(UNINSTALLER_RES) $(UTILS_OBJS)
+
+PDFFILTER_OBJS = \
+	$(ODLL)\PdfFilterDll.obj $(ODLL)\CPdfFilter.obj $(PDFFILTER_RES) \
+	$(OU)\BaseUtil.obj $(OU)\StrUtil.obj $(OU)\FileUtil.obj $(OU)\WinUtil.obj $(OU)\DebugLog.obj \
+	$(LIBMUPDF_LIB) $(OS)\MuPDF_Exports.obj $(OS)\PdfEngine.obj $(ZIP_OBJS)
+
+PDFPREVIEW_OBJS = \
+	$(ODLL)\PdfPreviewDll.obj $(ODLL)\PdfPreview.obj $(PDFPREVIEW_RES) \
+	$(OU)\BaseUtil.obj $(OU)\StrUtil.obj $(OU)\FileUtil.obj $(OU)\WinUtil.obj $(OU)\DebugLog.obj \
+	$(LIBMUPDF_LIB) $(OS)\MuPDF_Exports.obj $(OS)\PdfEngine.obj $(ZIP_OBJS)
+
+BROWSER_PLUGIN_OBJS = \
+	$(ODLL)\npPdfViewer.obj $(BROWSER_PLUGIN_RES) \
+	$(OU)\BaseUtil.obj $(OU)\StrUtil.obj $(OU)\FileUtil.obj $(OU)\WinUtil.obj $(OU)\DebugLog.obj \
+	$(OU)\CmdLineParser.obj \
+
+ENGINEDUMP_OBJS = \
+	$(OS)\EngineDump.obj $(ENGINE_OBJS) $(LIBS_OBJS) $(UTILS_OBJS) \
+	$(OS)\HtmlFormatter.obj $(OS)\EbookFormatter.obj $(OMUI)\MiniMui.obj \
+	$(OS)\MobiDoc.obj $(OS)\Doc.obj $(OU)\PdbReader.obj
+
+MEMTRACE_OBJS = \
+	$(OM)\MemTraceDll.obj $(UTILS_OBJS)
+
+!if "$(BUILD_TEX_IFILTER)"!=""
+PDFFILTER_OBJS = $(PDFFILTER_OBJS) $(ODLL)\CTeXFilter.obj
+PDFFILTER_CFLAGS = $(PDFFILTER_CFLAGS) /D "BUILD_TEX_IFILTER"
+!endif
+
+!if "$(BUILD_XPS_PREVIEW)"!=""
+PDFPREVIEW_CFLAGS = $(PDFPREVIEW_CFLAGS) /D "BUILD_XPS_PREVIEW"
+!endif
+
+!if "$(BUILD_CBZ_PREVIEW)$(BUILD_TGA_PREVIEW)"!=""
+PDFPREVIEW_OBJS = $(PDFPREVIEW_OBJS) $(OS)\ImagesEngine.obj $(OU)\GdiPlusUtil.obj \
+	$(OU)\JsonParser.obj $(OU)\HtmlPullParser.obj $(OU)\HtmlParserLookup.obj $(OU)\TgaReader.obj
+!if "$(BUILD_CBZ_PREVIEW)"!=""
+PDFPREVIEW_CFLAGS = $(PDFPREVIEW_CFLAGS) /D "BUILD_CBZ_PREVIEW"
+!endif
+!if "$(BUILD_TGA_PREVIEW)"!=""
+PDFPREVIEW_CFLAGS = $(PDFPREVIEW_CFLAGS) /D "BUILD_TGA_PREVIEW"
+!endif
+!endif
+
+##### SumatraPDF-specific build rules #####
+
+rebuild: clean SumatraPDF
+
+cleanmupdf: force
+	-del $(FITZ_DRAW_OBJS) $(FITZ_OBJS) $(MUPDF_OBJS) $(MUXPS_OBJS) $(MUCBZ_OBJS)
+
+## Note: the following command does not work on Windows
+cleanall: force
+	-rmdir /S /Q obj-*
+
+SumatraPDF:    $(OS) $(LIBMUPDF_DLL) $(SUMATRA_APP) $(SUMATRA_APP_NO_MUPDF)
+Installer:     $(OS) $(INSTALLER_APP)
+Uninstaller:   $(OS) $(UNINSTALLER_APP)
+PDFFilter:     $(OS) $(LIBMUPDF_DLL) $(PDFFILTER_DLL)
+PdfPreview:    $(OS) $(LIBMUPDF_DLL) $(PDFPREVIEW_DLL)
+BrowserPlugin: $(OS) $(BROWSER_PLUGIN)
+EngineDump:    $(OS) $(ENGINEDUMP_APP)
+memtrace:      $(OS) $(MEMTRACE_DLL)
+mudraw:        $(O)  $(MUDRAW_APP)
+mutool:        $(O)  $(MUTOOL_APP)
+
+# build tool_objs instead of the tools themselves to speed up linking
+tool_objs:     $(OS) $(ENGINEDUMP_OBJS) $(MEMTRACE_OBJS) $(MUDRAW_OBJS) $(MUTOOL_OBJS)
+
+$(OS): $(O) $(OE)
+	@if not exist $(OS) mkdir $(OS)
+	@if not exist $(OU) mkdir $(OU)
+	@if not exist $(ODLL) mkdir $(ODLL)
+	@if not exist $(OMUI) mkdir $(OMUI)
+	@if not exist $(OM) mkdir $(OM)
+
+$(SUMATRA_RES): src\SumatraPDF.rc src\Resource.h src\Version.h
+	rc /r /fo$@ $(RC_FLAGS) src\SumatraPDF.rc
+
+$(SUMATRA_APP): $(LIBS_OBJS) $(SUMATRA_OBJS)
+	$(LD) $(LDFLAGS) $** $(LIBS) /PDB:$*.pdb /OUT:$@
+
+$(SUMATRA_APP_NO_MUPDF): $(SUMATRA_OBJS) $(OS)\MuPDF_Exports.obj
+	$(LD) $(LDFLAGS) $** $(LIBS) /PDB:$*.pdb /OUT:$@ $(LIBMUPDF_LIB)
+
+$(LIBMUPDF_RES): src\libmupdf.rc src\Version.h
+	rc /r /fo$@ $(RC_FLAGS) src\libmupdf.rc
+
+$(LIBMUPDF_DLL): $(LIBS_OBJS) $(LIBMUPDF_DEF) $(LIBMUPDF_RES)
+	$(LD) /DLL $(LDFLAGS) $(LIBS_OBJS) $(LIBMUPDF_RES) $(LIBS) /DEF:$(LIBMUPDF_DEF) /IMPLIB:$(LIBMUPDF_LIB) /PDB:$*.pdb /OUT:$@
+
+$(INSTALLER_RES): src\installer\Installer.rc src\installer\Resource.h src\Version.h
+	rc /r /fo$@ $(RC_FLAGS) /D "INSTALL_PAYLOAD_ZIP=..\..\$(O)\InstallerData.zip" src\installer\Installer.rc
+
+$(UNINSTALLER_RES): src\installer\Installer.rc src\installer\Resource.h src\Version.h
+	rc /r /fo$@ $(RC_FLAGS) /D "BUILD_UNINSTALLER" src\installer\Installer.rc
+
+$(INSTALLER_APP): $(INSTALLER_OBJS)
+	$(LD) $(LDFLAGS) $** $(LIBS) /PDB:$*.pdb /OUT:$@
+
+$(UNINSTALLER_APP): $(UNINSTALLER_OBJS)
+	$(LD) $(LDFLAGS) $** $(LIBS) /PDB:$*.pdb /OUT:$@
+
+$(PDFFILTER_RES): src\ifilter\PdfFilter.rc src\Version.h
+	rc /r /fo$@ $(RC_FLAGS) src\ifilter\PdfFilter.rc
+
+$(PDFFILTER_DLL): $(PDFFILTER_OBJS)
+	$(LD) /DLL $(LDFLAGS) $** $(LIBS) /PDB:$*.pdb /OUT:$@
+
+$(PDFPREVIEW_RES): src\previewer\PdfPreview.rc src\Version.h
+	rc /r /fo$@ $(RC_FLAGS) src\previewer\PdfPreview.rc
+
+$(PDFPREVIEW_DLL): $(PDFPREVIEW_OBJS)
+	$(LD) /DLL $(LDFLAGS) $** $(LIBS) /PDB:$*.pdb /OUT:$@
+
+$(MEMTRACE_RES): src\memtrace\MemTrace.rc
+	rc /r /fo$@ $(RC_FLAGS) src\memtrace\MemTrace.rc
+
+$(MEMTRACE_DLL): $(MEMTRACE_OBJS)
+	$(LD) /DLL $(LDFLAGS) $** $(LIBS) /PDB:$*.pdb /OUT:$@
+
+$(BROWSER_PLUGIN_RES): src\browserplugin\npPdfViewer.rc src\Version.h
+	rc /r /fo$@ $(RC_FLAGS) src\browserplugin\npPdfViewer.rc
+
+$(BROWSER_PLUGIN): $(BROWSER_PLUGIN_OBJS)
+	$(LD) /DLL $(LDFLAGS) $** $(LIBS) /PDB:$*.pdb /OUT:$@
+
+$(ENGINEDUMP_APP): $(ENGINEDUMP_OBJS)
+	$(LD) $(LDFLAGS) $** $(LIBS) /PDB:$*.pdb /OUT:$@ /SUBSYSTEM:CONSOLE
+
+{src\utils}.cpp{$(OU)}.obj::
+	$(CC) $(SUMATRA_CFLAGS) /Fo$(OU)\ /Fd$(O)\vc80.pdb $<
+
+{src\mui}.cpp{$(OMUI)}.obj::
+	$(CC) $(SUMATRA_CFLAGS) /Fo$(OMUI)\ /Fd$(O)\vc80.pdb $<
+
+{src}.cpp{$(OS)}.obj::
+	$(CC) $(SUMATRA_CFLAGS) /Fo$(OS)\ /Fd$(O)\vc80.pdb $<
+
+{src\browserplugin}.cpp{$(ODLL)}.obj::
+	$(CC) $(BROWSER_PLUGIN_CFLAGS) /Fo$(ODLL)\ /Fd$(O)\vc80.pdb $<
+
+{src\ifilter}.cpp{$(ODLL)}.obj::
+	$(CC) $(PDFFILTER_CFLAGS) /Fo$(ODLL)\ /Fd$(O)\vc80.pdb $<
+
+{src\previewer}.cpp{$(ODLL)}.obj::
+	$(CC) $(PDFPREVIEW_CFLAGS) /Fo$(ODLL)\ /Fd$(O)\vc80.pdb $<
+
+{src\regress}.cpp{$(OS)}.obj::
+	$(CC) $(SUMATRA_CFLAGS) /Fo$(OS)\ /Fd$(O)\vc80.pdb $<
+
+{src\installer}.cpp{$(OS)}.obj::
+	$(CC) $(INSTALLER_CFLAGS) /Fo$(OS)\ /Fd$(O)\vc80.pdb $<
+$(OS)\Uninstaller.obj: $(OS)\Installer.obj
+	$(CC) $(UNINSTALLER_CFLAGS) /Fo$(OS)\Uninstaller.obj /Fd$(O)\vc80.pdb src\installer\Installer.cpp
+
+{src\memtrace}.cpp{$(OM)}.obj::
+	$(CC) $(MEMTRACE_CFLAGS) /Fo$(OM)\ /Fd$(O)\vc80.pdb $<
+
+## Header-dependencies for src\* and src\*\*
+!INCLUDE makefile.deps
