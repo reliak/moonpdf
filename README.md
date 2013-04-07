@@ -9,7 +9,8 @@ An example for the inclusion is the MoonPdf app (see excerpt below)
 <Window xmlns:mpp="clr-namespace:MoonPdfLib;assembly=MoonPdfLib" ...>
   <mpp:MoonPdfPanel Background="LightGray" ViewType="SinglePage" PageDisplay="ContinuousPages" PageBorderThickness="0,2,4,2" AllowDrop="True"/>
 </Window>
-´´´
+```
+
 Binaries
 ========
 The binaries for MoonPdf and MoonPdfLib can be found here:
