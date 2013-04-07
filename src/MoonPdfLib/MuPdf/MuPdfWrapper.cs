@@ -240,12 +240,12 @@ namespace MoonPdfLib.MuPdf
 		}
 	}
 
-	public struct BBox
+	internal struct BBox
 	{
 		public int Left, Top, Right, Bottom;
 	}
 
-	public struct Rectangle
+	internal struct Rectangle
 	{
 		public float Left, Top, Right, Bottom;
 
@@ -253,7 +253,7 @@ namespace MoonPdfLib.MuPdf
 		public float Height { get { return this.Bottom - this.Top; } }
 	}
 
-	public struct Matrix
+	internal struct Matrix
 	{
 		public float A, B, C, D, E, F;
 	}
