@@ -3,6 +3,8 @@
 
 // This file is licensed under GPLv3 (see ../COPYING)
 
+// Slightly modified (2013) by Daniel Kailer (see AUTHORS file) to enable X64 builds
+
 #include <windows.h>
 #include <gdiplus.h>
 extern "C" {
@@ -22,10 +24,10 @@ static LONG g_gdiplusUsage = 0;
 static ColorPalette *
 gdiplus_create_grayscale_palette(fz_context *ctx, int depth)
 {
-	ColorPalette * palette = (ColorPalette *)fz_malloc(ctx, sizeof(ColorPalette) + (1 << depth) * sizeof(ARGB));
+	ColorPalette * palette = (ColorPalette *)fz_malloc(ctx, sizeof(ColorPalette) + (1i64 << depth) * sizeof(ARGB));
 	
 	palette->Flags = PaletteFlagsGrayScale;
-	palette->Count = 1 << depth;
+	palette->Count = 1i64 << depth;
 	for (unsigned int i = 0; i < palette->Count; i++)
 	{
 		int val = i * 255 / (palette->Count - 1);
@@ -65,7 +67,7 @@ public:
 						for (int i = 0; i < 8 && i < pixmap->w - x; i++)
 						{
 							if (pixmap->samples[(y * pixmap->w + x + i) * 2])
-								byte |= 1 << (7 - i);
+								byte |= 1i64 << (7 - i);
 						}
 						((unsigned char *)data.Scan0)[y * data.Stride + x / 8] = byte;
 					}
@@ -869,7 +871,7 @@ gdiplus_get_path(fz_path *path, fz_matrix ctm, bool has_caps, int evenodd=1)
 	assert(len <= path->len / 2);
 	
 	// clipping intermittently fails for overly large regions (cf. pathscan.c::fz_insertgel)
-	fz_rect BBOX_BOUNDS = { -(1<<20), -(1<<20) , (1<<20), (1<<20) };
+	fz_rect BBOX_BOUNDS = { -(1i64<<20), -(1i64<<20) , (1i64<<20), (1i64<<20) };
 	BBOX_BOUNDS = fz_transform_rect(fz_invert_matrix(ctm), BBOX_BOUNDS);
 	for (int i = 0; i < len; i++)
 	{
