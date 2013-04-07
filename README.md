@@ -1,4 +1,5 @@
-moonpdf
+MoonPdf
 =======
 
-Contains a WPF control for displaying PDF files and a sample PDF viewer, that uses this control
+MoonPdf is a WPF-based PDF Viewer that uses the MoonPdfLib library.
+It uses MuPdf for the rendering of the PDF pages.
