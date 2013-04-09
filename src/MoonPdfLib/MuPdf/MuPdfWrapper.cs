@@ -240,11 +240,6 @@ namespace MoonPdfLib.MuPdf
 		}
 	}
 
-	internal struct BBox
-	{
-		public int Left, Top, Right, Bottom;
-	}
-
 	internal struct Rectangle
 	{
 		public float Left, Top, Right, Bottom;
@@ -255,6 +250,6 @@ namespace MoonPdfLib.MuPdf
 
 	internal struct Matrix
 	{
-		public float A, B, C, D, E, F;
+		public float A, D;
 	}
 }
