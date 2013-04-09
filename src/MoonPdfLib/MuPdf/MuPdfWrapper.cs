@@ -240,16 +240,24 @@ namespace MoonPdfLib.MuPdf
 		}
 	}
 
-	internal struct Rectangle
-	{
-		public float Left, Top, Right, Bottom;
+    internal struct Rectangle
+    {
+        public float Left, Top, Right, Bottom;
 
-		public float Width { get { return this.Right - this.Left; } }
-		public float Height { get { return this.Bottom - this.Top; } }
+        public float Width { get { return this.Right - this.Left; } }
+        public float Height { get { return this.Bottom - this.Top; } }
+
+    }
+
+#pragma warning disable 0649
+    internal struct BBox
+	{
+		public int Left, Top, Right, Bottom;
 	}
 
-	internal struct Matrix
-	{
-		public float A, D;
-	}
+    internal struct Matrix
+    {
+        public float A, B, C, D, E, F;
+    }
+#pragma warning restore 0649
 }
