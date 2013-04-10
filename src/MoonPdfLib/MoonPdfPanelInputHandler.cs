@@ -138,8 +138,28 @@ namespace MoonPdfLib
 			if (lastMouseDownLocation != null)
 			{
 				var currentPos = e.Location;
-				this.source.ScrollViewer.ScrollToVerticalOffset(lastMouseDownVerticalOffset + lastMouseDownLocation.Value.Y - currentPos.Y);
-				this.source.ScrollViewer.ScrollToHorizontalOffset(lastMouseDownHorizontalOffset + lastMouseDownLocation.Value.X - currentPos.X);
+                var proposedYOffset = lastMouseDownVerticalOffset + lastMouseDownLocation.Value.Y - currentPos.Y;
+                var proposedXOffset = lastMouseDownHorizontalOffset + lastMouseDownLocation.Value.X - currentPos.X;
+
+                if (proposedYOffset <= 0 || proposedYOffset > this.source.ScrollViewer.ScrollableHeight)
+                {
+                    lastMouseDownVerticalOffset = proposedYOffset <= 0 ? 0 : this.source.ScrollViewer.ScrollableHeight;
+                    lastMouseDownLocation = new Point(lastMouseDownLocation.Value.X, e.Y);
+
+                    proposedYOffset = lastMouseDownVerticalOffset + lastMouseDownLocation.Value.Y - currentPos.Y;
+                }
+
+                this.source.ScrollViewer.ScrollToVerticalOffset(proposedYOffset);
+
+                
+                if (proposedXOffset <= 0 || proposedXOffset > this.source.ScrollViewer.ScrollableWidth)
+                {
+                    lastMouseDownHorizontalOffset = proposedXOffset <= 0 ? 0 : this.source.ScrollViewer.ScrollableWidth;
+                    lastMouseDownLocation = new Point(e.X, lastMouseDownLocation.Value.Y);
+                    proposedXOffset = lastMouseDownHorizontalOffset + lastMouseDownLocation.Value.X - currentPos.X;
+                }
+
+                this.source.ScrollViewer.ScrollToHorizontalOffset(proposedXOffset);   
 			}
 		}
 	}

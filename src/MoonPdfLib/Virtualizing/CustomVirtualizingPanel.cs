@@ -37,9 +37,6 @@ namespace MoonPdfLib.Virtualizing
 			this.RenderTransform = _trans;
 		}
 
-		
-		
-		/// <summary>
 		/// the ItemBounds are NOT the bounds of the pdf pages
 		/// its a combination of all pages from the same row (if not ViewType.SinglePage) plus the offset borders
 		/// </summary>
