@@ -52,7 +52,7 @@ namespace MoonPdf
 
 			moonPdfPanel.ViewTypeChanged += moonPdfPanel_ViewTypeChanged;
 			moonPdfPanel.ZoomTypeChanged += moonPdfPanel_ZoomTypeChanged;
-			moonPdfPanel.PageDisplayChanged += moonPdfPanel_PageDisplayChanged;
+			moonPdfPanel.PageRowDisplayChanged += moonPdfPanel_PageDisplayChanged;
 			moonPdfPanel.FileLoaded += moonPdfPanel_FileLoaded;
 
 			this.UpdatePageDisplayMenuItem();
@@ -78,7 +78,7 @@ namespace MoonPdf
 
 		private void UpdatePageDisplayMenuItem()
 		{
-			this.itmContinuously.IsChecked = (this.moonPdfPanel.PageDisplay == MoonPdfLib.PageDisplayType.ContinuousPages);
+			this.itmContinuously.IsChecked = (this.moonPdfPanel.PageRowDisplay == MoonPdfLib.PageRowDisplayType.ContinuousPageRows);
 		}
 
 		void moonPdfPanel_ZoomTypeChanged(object sender, EventArgs e)

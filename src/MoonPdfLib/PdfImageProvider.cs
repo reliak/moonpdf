@@ -72,7 +72,7 @@ namespace MoonPdfLib
 			}
 
 			var end = Math.Min(FetchCount(), startIndex + count - 1);
-			var list = new List<IEnumerable<PdfImage>>();
+            var list = new List<IEnumerable<PdfImage>>();
 			var rowList = new List<PdfImage>(imagesPerRow);
 			var offset = viewType == ViewType.BookView ? 1 : 0;
 
@@ -93,12 +93,14 @@ namespace MoonPdfLib
 					}
 
 					var bms = bmp.ToBitmapSource();
-					bms.Freeze(); // to avoid threading problems when using AsyncVirtualizingCollection
+                    // Freeze bitmap to avoid threading problems when using AsyncVirtualizingCollection,
+                    // because FetchRange is NOT called from the UI thread
+					bms.Freeze();
 
 					if( (i == 1 && viewType == ViewType.BookView) || (i + offset) % 2 == 0 )
 						margin.Right = 0; // set right margin to zero for first page and for all pages that are on the right side
 
-					var img = new PdfImage { ImageSource = bms, Width = bms.Width, Height = bms.Height, HorizontalAlignment = HorizontalAlignment.Center, Margin = margin };
+					var img = new PdfImage { ImageSource = bms, Margin = margin };
 
 					// if first page and viewtype bookview, add the first page and continue with next
 					if (viewType == ViewType.BookView && i == 1)

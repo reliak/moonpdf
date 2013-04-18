@@ -59,7 +59,6 @@ namespace MoonPdfLib.MuPdf
 		/// <returns></returns>
 		public static System.Windows.Size[] GetPageBounds(string pdfFilename, ImageRotation rotation = ImageRotation.None)
 		{
-			var result = new List<System.Windows.Size>();
 			Func<double, double, System.Windows.Size> sizeCallback = (width, height) => new System.Windows.Size(width, height);
 			
 			if( rotation == ImageRotation.Rotate90 || rotation == ImageRotation.Rotate270 )
@@ -68,19 +67,20 @@ namespace MoonPdfLib.MuPdf
 			using (var stream = new PdfFileStream(pdfFilename))
 			{
 				var pageCount = NativeMethods.CountPages(stream.Document); // gets the number of pages in the document
+                var resultBounds = new System.Windows.Size[pageCount];
 
 				for (int i = 0; i < pageCount; i++)
 				{
 					IntPtr p = NativeMethods.LoadPage(stream.Document, i); // loads the page
 					Rectangle pageBound = NativeMethods.BoundPage(stream.Document, p);
 
-					result.Add(sizeCallback(pageBound.Width, pageBound.Height));
+					resultBounds[i] = sizeCallback(pageBound.Width, pageBound.Height);
 
 					NativeMethods.FreePage(stream.Document, p); // releases the resources consumed by the page
 				}
-			}
 
-			return result.ToArray();
+                return resultBounds;
+			}
 		}
 
 		/// <summary>

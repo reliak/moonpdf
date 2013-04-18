@@ -87,7 +87,7 @@ namespace MoonPdfLib
 
 				e.Handled = true;
 			}
-			else if (!ctrlDown && (this.source.ScrollViewer == null || this.source.ScrollViewer.ComputedVerticalScrollBarVisibility != Visibility.Visible) && this.source.PageDisplay == PageDisplayType.SinglePage)
+			else if (!ctrlDown && (this.source.ScrollViewer == null || this.source.ScrollViewer.ComputedVerticalScrollBarVisibility != Visibility.Visible) && this.source.PageRowDisplay == PageRowDisplayType.SinglePageRow)
 			{
 				if (e.Delta > 0)
 					this.source.GotoPreviousPage();

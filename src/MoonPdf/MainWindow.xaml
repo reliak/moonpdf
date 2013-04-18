@@ -43,6 +43,6 @@
                 <MenuItem Header="{Binding Commands.ShowAboutCommand.Name}" Command="{Binding Commands.ShowAboutCommand}"/>
             </MenuItem>
         </Menu>
-        <mpp:MoonPdfPanel Background="LightGray" ViewType="SinglePage" PageDisplay="ContinuousPages" PageBorderThickness="0,2,4,2" AllowDrop="True" x:Name="moonPdfPanel" x:FieldModifier="private"/>
+        <mpp:MoonPdfPanel Background="LightGray" ViewType="SinglePage" PageRowDisplay="ContinuousPageRows" PageMargin="0,2,4,2" AllowDrop="True" x:Name="moonPdfPanel" x:FieldModifier="private"/>
     </DockPanel>
 </Window>

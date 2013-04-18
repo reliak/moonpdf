@@ -98,10 +98,10 @@
     <Compile Include="MoonPdfPanelInputHandler.cs" />
     <Compile Include="MuPdf\MuPdfWrapper.cs" />
     <Compile Include="PageDisplaySettings.cs" />
-    <Compile Include="PageDisplayType.cs" />
+    <Compile Include="PageRowDisplayType.cs" />
     <Compile Include="PdfImage.cs" />
     <Compile Include="PdfImageProvider.cs" />
-    <Compile Include="PdfPageBound.cs" />
+    <Compile Include="PageRowBound.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SinglePageMoonPdfPanel.xaml.cs">
       <DependentUpon>SinglePageMoonPdfPanel.xaml</DependentUpon>
@@ -119,6 +119,10 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
+    <Resource Include="GlobalResources.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Resource>
     <Page Include="MoonPdfPanel.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>

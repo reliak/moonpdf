@@ -25,10 +25,8 @@ namespace MoonPdfLib
 {
 	internal class PdfImage
 	{
-		public double Width { get; set; }
-		public double Height { get; set; }
-		public HorizontalAlignment HorizontalAlignment { get; set; }
 		public ImageSource ImageSource { get; set; }
-		public Thickness Margin { get; set; }
+        // we use only the "Right"-property of "Thickness", but we choose the "Thickness" structure instead of a simple double, because it makes data binding easier.
+        public Thickness Margin { get; set; }
 	}
 }

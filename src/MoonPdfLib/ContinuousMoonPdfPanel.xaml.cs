@@ -62,7 +62,7 @@ namespace MoonPdfLib
 		{
 			this.virtualPanel = VisualTreeHelperEx.FindChild<CustomVirtualizingPanel>(this);
 			this.scrollViewer = VisualTreeHelperEx.FindChild<ScrollViewer>(this);
-			this.virtualPanel.ItemBounds = this.parent.ItemBounds.Select(f => f.SizeIncludingOffset).ToArray();
+			this.virtualPanel.PageRowBounds = this.parent.PageRowBounds.Select(f => f.SizeIncludingOffset).ToArray();
 			this.imageProvider = new PdfImageProvider(pdfFilename, this.parent.TotalPages,
 										new PageDisplaySettings(this.parent.GetPagesPerRow(), this.parent.ViewType, this.parent.HorizontalMargin, this.parent.Rotation));
 
@@ -105,14 +105,14 @@ namespace MoonPdfLib
 			var scrollBarWidth = this.scrollViewer.ComputedVerticalScrollBarVisibility == System.Windows.Visibility.Visible ? SystemParameters.VerticalScrollBarWidth : 0;
 			scrollBarWidth += 2; // Magic number, sorry :)
 
-			ZoomInternal((this.ActualWidth - scrollBarWidth) / this.parent.ItemBounds.Max(f => f.SizeIncludingOffset.Width));
+			ZoomInternal((this.ActualWidth - scrollBarWidth) / this.parent.PageRowBounds.Max(f => f.SizeIncludingOffset.Width));
 		}
 
 		public void ZoomToHeight()
 		{
 			var scrollBarHeight = this.scrollViewer.ComputedHorizontalScrollBarVisibility == System.Windows.Visibility.Visible ? SystemParameters.HorizontalScrollBarHeight : 0;
 
-			ZoomInternal((this.ActualHeight - scrollBarHeight) / this.parent.ItemBounds.Max(f => f.SizeIncludingOffset.Height));
+			ZoomInternal((this.ActualHeight - scrollBarHeight) / this.parent.PageRowBounds.Max(f => f.SizeIncludingOffset.Height));
 		}
 
 		public void ZoomIn()
@@ -144,7 +144,7 @@ namespace MoonPdfLib
 			if (Math.Abs(Math.Round(zoom, 2) - Math.Round(zoomFactor, 2)) == 0.0)
 				return;
 
-			this.virtualPanel.ItemBounds = this.parent.ItemBounds.Select(f => new Size(f.Size.Width * zoomFactor + f.HorizontalOffset, f.Size.Height * zoomFactor + f.VerticalOffset)).ToArray();
+			this.virtualPanel.PageRowBounds = this.parent.PageRowBounds.Select(f => new Size(f.Size.Width * zoomFactor + f.HorizontalOffset, f.Size.Height * zoomFactor + f.VerticalOffset)).ToArray();
 			this.imageProvider.Settings.ZoomFactor = (float)zoomFactor;
 			
 			this.CreateNewItemsSource();

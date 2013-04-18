@@ -141,14 +141,14 @@ namespace MoonPdfLib
 		public void ZoomToWidth()
 		{
 			var scrollBarWidth = this.scrollViewer.ComputedVerticalScrollBarVisibility == System.Windows.Visibility.Visible ? SystemParameters.VerticalScrollBarWidth : 0;
-			var zoomFactor = (this.parent.ActualWidth - scrollBarWidth) / this.parent.ItemBounds[this.currentPageIndex].SizeIncludingOffset.Width;
-			var pageBound = this.parent.ItemBounds[this.currentPageIndex];
+			var zoomFactor = (this.parent.ActualWidth - scrollBarWidth) / this.parent.PageRowBounds[this.currentPageIndex].SizeIncludingOffset.Width;
+			var pageBound = this.parent.PageRowBounds[this.currentPageIndex];
 
 			if (scrollBarWidth == 0 && ((pageBound.Size.Height * zoomFactor) + pageBound.VerticalOffset) >= this.parent.ActualHeight)
 				scrollBarWidth += SystemParameters.VerticalScrollBarWidth;
 
 			scrollBarWidth += 2; // Magic number, sorry :)
-			zoomFactor = (this.parent.ActualWidth - scrollBarWidth) / this.parent.ItemBounds[this.currentPageIndex].SizeIncludingOffset.Width;
+			zoomFactor = (this.parent.ActualWidth - scrollBarWidth) / this.parent.PageRowBounds[this.currentPageIndex].SizeIncludingOffset.Width;
 
 			ZoomInternal(zoomFactor);
 		}
@@ -156,13 +156,13 @@ namespace MoonPdfLib
 		public void ZoomToHeight()
 		{
 			var scrollBarHeight = this.scrollViewer.ComputedHorizontalScrollBarVisibility == System.Windows.Visibility.Visible ? SystemParameters.HorizontalScrollBarHeight : 0;
-			var zoomFactor = (this.parent.ActualHeight - scrollBarHeight) / this.parent.ItemBounds[this.currentPageIndex].SizeIncludingOffset.Height;
-			var pageBound = this.parent.ItemBounds[this.currentPageIndex];
+			var zoomFactor = (this.parent.ActualHeight - scrollBarHeight) / this.parent.PageRowBounds[this.currentPageIndex].SizeIncludingOffset.Height;
+			var pageBound = this.parent.PageRowBounds[this.currentPageIndex];
 
 			if (scrollBarHeight == 0 && ((pageBound.Size.Width * zoomFactor) + pageBound.HorizontalOffset) >= this.parent.ActualWidth)
 				scrollBarHeight += SystemParameters.HorizontalScrollBarHeight;
 
-			zoomFactor = (this.parent.ActualHeight - scrollBarHeight) / this.parent.ItemBounds[this.currentPageIndex].SizeIncludingOffset.Height;
+			zoomFactor = (this.parent.ActualHeight - scrollBarHeight) / this.parent.PageRowBounds[this.currentPageIndex].SizeIncludingOffset.Height;
 
 			ZoomInternal(zoomFactor);
 		}

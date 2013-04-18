@@ -37,30 +37,30 @@ namespace MoonPdfLib.Virtualizing
 			this.RenderTransform = _trans;
 		}
 
-		/// the ItemBounds are NOT the bounds of the pdf pages
-		/// its a combination of all pages from the same row (if not ViewType.SinglePage) plus the offset borders
+        /// <summary>
+        /// the bounds are a combination of all pages from the same row (plus the offset borders, if not ViewType.SinglePage)
 		/// </summary>
-		public Size[] ItemBounds { get; set; }
+		public Size[] PageRowBounds { get; set; }
 
 		public int GetItemIndexByVerticalOffset(double yOffset)
 		{
 			var sum = 0.0;
 
-			for (int i = 0; i < ItemBounds.Length; i++)
+			for (int i = 0; i < PageRowBounds.Length; i++)
 			{
-				sum += ItemBounds[i].Height;
+				sum += PageRowBounds[i].Height;
 
 				if( yOffset < sum )
 					return i;
 			}
 
-			return ItemBounds.Length - 1;
+			return PageRowBounds.Length - 1;
 		}
 		
 		public double GetVerticalOffsetByItemIndex(int itemIndex)
 		{
 			// sum the heights of all previous pages: this is where the current y offset should be
-			return ItemBounds.Take(itemIndex).Sum(f => f.Height);
+			return PageRowBounds.Take(itemIndex).Sum(f => f.Height);
 		}
 
 		/// <summary>
@@ -72,7 +72,7 @@ namespace MoonPdfLib.Virtualizing
 		{
 			UpdateScrollInfo(availableSize);
 
-			if (ItemBounds == null || ItemBounds.Length == 0)
+			if (PageRowBounds == null || PageRowBounds.Length == 0)
 				return availableSize;
 
 			// Figure out range that's visible based on layout algorithm
@@ -122,7 +122,7 @@ namespace MoonPdfLib.Virtualizing
 					}
 
 					// Measurements will depend on layout algorithm
-					child.Measure(ItemBounds[itemIndex]);
+					child.Measure(PageRowBounds[itemIndex]);
 				}
 			}
 
@@ -191,14 +191,14 @@ namespace MoonPdfLib.Virtualizing
 		/// <returns></returns>
 		private System.Windows.Size CalculateExtent(System.Windows.Size availableSize, int itemCount)
 		{
-			if (ItemBounds == null || ItemBounds.Length == 0)
+			if (PageRowBounds == null || PageRowBounds.Length == 0)
 				return new Size(availableSize.Width, _extent.Height);
 
 			// we get the pdf page with the greatest width, so we know how broad the extent must be
-			var maxWidth = ItemBounds.Select(f => f.Width).Max();
+			var maxWidth = PageRowBounds.Select(f => f.Width).Max();
 
 			// we get the sum of all pdf page heights, so we know how high the extent must be
-			var totalHeight = ItemBounds.Sum(f => f.Height); // 
+			var totalHeight = PageRowBounds.Sum(f => f.Height);
 
 			return new Size(maxWidth, totalHeight);
 		}
@@ -213,16 +213,16 @@ namespace MoonPdfLib.Virtualizing
 			firstVisibleItemIndex = -1;
 			lastVisibleItemIndex = -1;
 
-			if (ItemBounds == null || ItemBounds.Length == 0)
+			if (PageRowBounds == null || PageRowBounds.Length == 0)
 				return;
 
 			double sum = 0.0;
 			var bottom = _offset.Y + _viewport.Height;
 
 			// we iterate through all the items and add the height of them to "sum"
-			for (int i = 0; i < ItemBounds.Length; i++)
+			for (int i = 0; i < PageRowBounds.Length; i++)
 			{
-				sum += ItemBounds[i].Height;
+				sum += PageRowBounds[i].Height;
 
 				// when we detect, that the current y offset (_offset.Y) is smaller than
 				// this "sum", we set first and last visible index
@@ -232,11 +232,11 @@ namespace MoonPdfLib.Virtualizing
 					lastVisibleItemIndex = i;
 
 					// used to determine the lastVisibleItemIndex
-					for (int k = i + 1; k < ItemBounds.Length; k++)
+					for (int k = i + 1; k < PageRowBounds.Length; k++)
 					{
-						sum += ItemBounds[k].Height;
+						sum += PageRowBounds[k].Height;
 
-						if (bottom < sum || k == ItemBounds.Length - 1)
+						if (bottom < sum || k == PageRowBounds.Length - 1)
 						{
 							lastVisibleItemIndex = k;
 							break;
@@ -273,7 +273,7 @@ namespace MoonPdfLib.Virtualizing
 		/// <param name="finalSize">The size of the panel</param>
 		private void ArrangeChild(int itemIndex, UIElement child, System.Windows.Size finalSize)
 		{
-			var size = ItemBounds[itemIndex];
+			var size = PageRowBounds[itemIndex];
 			var x = Math.Max(0, (finalSize.Width / 2) - (size.Width / 2)); // used to center the content horizontally
 			var y = GetVerticalOffsetByItemIndex(itemIndex);
 

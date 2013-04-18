@@ -40,16 +40,16 @@ namespace MoonPdfLib
 		public event EventHandler FileLoaded;
 		public event EventHandler ZoomTypeChanged;
 		public event EventHandler ViewTypeChanged;
-		public event EventHandler PageDisplayChanged;
+		public event EventHandler PageRowDisplayChanged;
 
 		private ZoomType zoomType = ZoomType.Fixed;
 		private IMoonPdfPanel innerPanel;
 		private MoonPdfPanelInputHandler inputHandler;
-		private PdfPageBound[] itemBounds;
+		private PageRowBound[] pageRowBounds;
 		private DispatcherTimer resizeTimer;
 
 		#region Dependency properties
-		public static readonly DependencyProperty PageBorderThicknessProperty = DependencyProperty.Register("PageBorderThickness", typeof(Thickness),
+		public static readonly DependencyProperty PageMarginProperty = DependencyProperty.Register("PageMargin", typeof(Thickness),
 																			typeof(MoonPdfPanel), new FrameworkPropertyMetadata(new Thickness(0, 2, 4, 2)));
 
 		public static readonly DependencyProperty ZoomStepProperty = DependencyProperty.Register("ZoomStep", typeof(double),
@@ -67,13 +67,13 @@ namespace MoonPdfLib
 		public static readonly DependencyProperty RotationProperty = DependencyProperty.Register("Rotation", typeof(ImageRotation),
 																			typeof(MoonPdfPanel), new FrameworkPropertyMetadata(ImageRotation.None));
 
-		public static readonly DependencyProperty PageDisplayProperty = DependencyProperty.Register("PageDisplay", typeof(PageDisplayType),
-																			typeof(MoonPdfPanel), new FrameworkPropertyMetadata(PageDisplayType.SinglePage));
+		public static readonly DependencyProperty PageRowDisplayProperty = DependencyProperty.Register("PageRowDisplay", typeof(PageRowDisplayType),
+																			typeof(MoonPdfPanel), new FrameworkPropertyMetadata(PageRowDisplayType.SinglePageRow));
 		
-		public Thickness PageBorderThickness
+		public Thickness PageMargin
 		{
-			get { return (Thickness)GetValue(PageBorderThicknessProperty); }
-			set { SetValue(PageBorderThicknessProperty, value); }
+			get { return (Thickness)GetValue(PageMarginProperty); }
+			set { SetValue(PageMarginProperty, value); }
 		}
 
 		public double ZoomStep
@@ -106,17 +106,17 @@ namespace MoonPdfLib
 			set { SetValue(RotationProperty, value); }
 		}
 
-		public PageDisplayType PageDisplay
+		public PageRowDisplayType PageRowDisplay
 		{
-			get { return (PageDisplayType)GetValue(PageDisplayProperty); }
-			set { SetValue(PageDisplayProperty, value); }
+			get { return (PageRowDisplayType)GetValue(PageRowDisplayProperty); }
+			set { SetValue(PageRowDisplayProperty, value); }
 		}
 		#endregion
 
-		public double HorizontalMargin { get { return this.PageBorderThickness.Right; } }
+		public double HorizontalMargin { get { return this.PageMargin.Right; } }
 		public string CurrentFilename { get; private set; }
 		public int TotalPages { get; private set; }
-		internal PdfPageBound[] ItemBounds { get { return this.itemBounds; } }
+		internal PageRowBound[] PageRowBounds { get { return this.pageRowBounds; } }
 
 		public ZoomType ZoomType
 		{
@@ -147,7 +147,7 @@ namespace MoonPdfLib
 		{
 			InitializeComponent();
 
-			this.ChangeDisplayType(this.PageDisplay);
+			this.ChangeDisplayType(this.PageRowDisplay);
 			this.inputHandler = new MoonPdfPanelInputHandler(this);
 
 			this.SizeChanged += PdfViewerPanel_SizeChanged;
@@ -193,22 +193,21 @@ namespace MoonPdfLib
 
 		private void LoadPdfFile(string pdfFilename)
 		{
-			var tmpBounds = MuPdfWrapper.GetPageBounds(pdfFilename, this.Rotation);
-			var finalBounds = CalculatePageBounds(tmpBounds, this.ViewType);
-			this.itemBounds = finalBounds.ToArray();
-			this.TotalPages = tmpBounds.Length;
+			var pageBounds = MuPdfWrapper.GetPageBounds(pdfFilename, this.Rotation);
+            this.pageRowBounds = CalculatePageRowBounds(pageBounds, this.ViewType);
+			this.TotalPages = pageBounds.Length;
 			this.innerPanel.Load(pdfFilename);
 		}
 
-		private PdfPageBound[] CalculatePageBounds(Size[] singlePageBounds, ViewType viewType)
+		private PageRowBound[] CalculatePageRowBounds(Size[] singlePageBounds, ViewType viewType)
 		{
 			var pagesPerRow = Math.Min(GetPagesPerRow(), singlePageBounds.Length); // if multiple page-view, but pdf contains less pages than the pages per row
-			var finalBounds = new List<PdfPageBound>();
-			var verticalBorderOffset = (this.PageBorderThickness.Top + this.PageBorderThickness.Bottom);
+			var finalBounds = new List<PageRowBound>();
+			var verticalBorderOffset = (this.PageMargin.Top + this.PageMargin.Bottom);
 
 			if (viewType == MoonPdfLib.ViewType.SinglePage)
 			{
-				finalBounds.AddRange(singlePageBounds.Select(p => new PdfPageBound( p, verticalBorderOffset, 0)));
+				finalBounds.AddRange(singlePageBounds.Select(p => new PageRowBound( p, verticalBorderOffset, 0)));
 			}
 			else
 			{
@@ -218,14 +217,14 @@ namespace MoonPdfLib
 				{
 					if (i == 0 && viewType == MoonPdfLib.ViewType.BookView)
 					{
-						finalBounds.Add(new PdfPageBound(singlePageBounds[0], verticalBorderOffset, 0));
+						finalBounds.Add(new PageRowBound(singlePageBounds[0], verticalBorderOffset, 0));
 						continue;
 					}
 
 					var subset = singlePageBounds.Take(i, pagesPerRow).ToArray();
 
 					// we get the max page-height from all pages in the subset and the sum of all page widths of the subset plus the offset between the pages
-					finalBounds.Add(new PdfPageBound(new Size(subset.Sum(f => f.Width), subset.Max(f => f.Height)), verticalBorderOffset, horizontalBorderOffset * (subset.Length - 1)));
+					finalBounds.Add(new PageRowBound(new Size(subset.Sum(f => f.Width), subset.Max(f => f.Height)), verticalBorderOffset, horizontalBorderOffset * (subset.Length - 1)));
 					i += (pagesPerRow - 1);
 				}
 			}
@@ -276,6 +275,9 @@ namespace MoonPdfLib
 			this.ZoomType = ZoomType.Fixed;
 		}
 
+        /// <summary>
+        /// Sets the ZoomType back to Fixed
+        /// </summary>
 		public void SetFixedZoom()
 		{
 			this.ZoomType = MoonPdfLib.ZoomType.Fixed;
@@ -331,15 +333,15 @@ namespace MoonPdfLib
 
 		public void TogglePageDisplay()
 		{
-			this.PageDisplay = (this.PageDisplay == PageDisplayType.SinglePage) ? PageDisplayType.ContinuousPages : PageDisplayType.SinglePage;
+			this.PageRowDisplay = (this.PageRowDisplay == PageRowDisplayType.SinglePageRow) ? PageRowDisplayType.ContinuousPageRows : PageRowDisplayType.SinglePageRow;
 		}
 
 		protected override void OnPropertyChanged(DependencyPropertyChangedEventArgs e)
 		{
 			base.OnPropertyChanged(e);
 
-			if (e.Property.Name.Equals("PageDisplay"))
-				ChangeDisplayType((PageDisplayType)e.NewValue);
+            if (e.Property.Name.Equals("PageRowDisplay"))
+				ChangeDisplayType((PageRowDisplayType)e.NewValue);
 			else if (e.Property.Name.Equals("Rotation"))
 				this.Rotate((ImageRotation)e.NewValue);
 			else if (e.Property.Name.Equals("ViewType"))
@@ -354,14 +356,14 @@ namespace MoonPdfLib
 				this.ViewTypeChanged(this, EventArgs.Empty);
 		}
 
-		private void ChangeDisplayType(PageDisplayType pageDisplayType)
+		private void ChangeDisplayType(PageRowDisplayType pageRowDisplayType)
 		{
 			UpdateAndReload(() =>
 				{
 					// we need to remove the current innerPanel
 					this.pnlMain.Children.Clear();
 
-					if (pageDisplayType == PageDisplayType.SinglePage)
+					if (pageRowDisplayType == PageRowDisplayType.SinglePageRow)
 						this.innerPanel = new SinglePageMoonPdfPanel(this);
 					else
 						this.innerPanel = new ContinuousMoonPdfPanel(this);
@@ -369,8 +371,8 @@ namespace MoonPdfLib
 					this.pnlMain.Children.Add(this.innerPanel.Instance);
 				}, this.ViewType);
 
-			if (this.PageDisplayChanged != null)
-				this.PageDisplayChanged(this, EventArgs.Empty);
+			if (this.PageRowDisplayChanged != null)
+				this.PageRowDisplayChanged(this, EventArgs.Empty);
 		}
 
 		private void UpdateAndReload(Action updateAction, ViewType viewType)

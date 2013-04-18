@@ -8,45 +8,28 @@
              x:ClassModifier="internal"
              d:DesignHeight="300" d:DesignWidth="300" UseLayoutRounding="True">
     <UserControl.Resources>
-        <Style x:Key="outer" TargetType="{x:Type ItemsControl}">
-            <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Auto" />
-            <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Auto" />
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="{x:Type ItemsControl}">
-                        <ScrollViewer CanContentScroll="True" FocusVisualStyle="{x:Null}">
-                            <ItemsPresenter />
-                        </ScrollViewer>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-        <Style x:Key="inner" TargetType="{x:Type ItemsControl}">
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="{x:Type ItemsControl}">
-                        <ItemsPresenter />
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="GlobalResources.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
     </UserControl.Resources>
-    <ItemsControl Name="itemsControl" Style="{StaticResource outer}" UseLayoutRounding="True">
+    <ItemsControl Name="itemsControl" UseLayoutRounding="True" ScrollViewer.HorizontalScrollBarVisibility="Auto" ScrollViewer.VerticalScrollBarVisibility="Auto">
+        <ItemsControl.Template>
+            <ControlTemplate TargetType="{x:Type ItemsControl}">
+                <ScrollViewer CanContentScroll="True" FocusVisualStyle="{x:Null}">
+                    <ItemsPresenter />
+                </ScrollViewer>
+            </ControlTemplate>
+        </ItemsControl.Template>
         <ItemsControl.ItemTemplate>
             <DataTemplate>
-                <ItemsControl ItemsSource="{Binding}" Style="{StaticResource inner}">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <DockPanel Width="{Binding Width}" Height="{Binding Height}" UseLayoutRounding="True" RenderOptions.BitmapScalingMode="NearestNeighbor">
-                                <Image DockPanel.Dock="Left" Source="{Binding ImageSource}" Margin="{Binding Margin}" HorizontalAlignment="{Binding HorizontalAlignment}" UseLayoutRounding="True" RenderOptions.BitmapScalingMode="NearestNeighbor" Stretch="None" />
-                            </DockPanel>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                    <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <StackPanel Orientation="Horizontal" />
-                        </ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
+                <ItemsControl ItemsSource="{Binding}" Style="{StaticResource moonPdfItems}">
+                    <ItemsControl.Template>
+                        <ControlTemplate TargetType="{x:Type ItemsControl}">
+                            <ItemsPresenter />
+                        </ControlTemplate>
+                    </ItemsControl.Template>
                 </ItemsControl>
             </DataTemplate>
         </ItemsControl.ItemTemplate>
