@@ -37,7 +37,7 @@ namespace MoonPdf
 		{
 			InitializeComponent();
 
-			this.Icon = MoonPdf.Resources.moon.ToBitmap().ToBitmapSource();
+			this.Icon = MoonPdf.Resources.moon.ToBitmapSource();
 			var company = (AssemblyCompanyAttribute)Assembly.GetExecutingAssembly().GetCustomAttributes(typeof(AssemblyCompanyAttribute), true).First();
 			var product = (AssemblyProductAttribute)Assembly.GetExecutingAssembly().GetCustomAttributes(typeof(AssemblyProductAttribute), true).First();
 			var version = (AssemblyFileVersionAttribute)Assembly.GetExecutingAssembly().GetCustomAttributes(typeof(AssemblyFileVersionAttribute), true).First();

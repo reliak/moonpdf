@@ -14,6 +14,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 !*/
+using MoonPdfLib.Helper;
 /*
  * 2013 - Modified and extended version of W. Jordan's code (see AUTHORS file)
  */
@@ -101,13 +102,17 @@ namespace MoonPdfLib.MuPdf
 			IntPtr pix = IntPtr.Zero;
 			IntPtr dev = IntPtr.Zero;
 
+            var currentDpi = DpiHelper.GetCurrentDpi();
+            var zoomX = zoomFactor * (currentDpi.HorizontalDpi / DpiHelper.DEFAULT_DPI);
+            var zoomY = zoomFactor * (currentDpi.VerticalDpi / DpiHelper.DEFAULT_DPI);
+
 			// gets the size of the page and multiplies it with zoom factors
-			int width = (int)(pageBound.Width * zoomFactor);
-			int height = (int)(pageBound.Height * zoomFactor);
+            int width = (int)(pageBound.Width * zoomX);
+			int height = (int)(pageBound.Height * zoomY);
 
 			// sets the matrix as a scaling matrix (zoomX,0,0,zoomY,0,0)
-			ctm.A = zoomFactor;
-			ctm.D = zoomFactor;
+            ctm.A = zoomX;
+            ctm.D = zoomY;
 
 			// creates a pixmap the same size as the width and height of the page
 			pix = NativeMethods.NewPixmap(context, NativeMethods.FindDeviceColorSpace(context, "DeviceRGB"), width, height);
@@ -148,8 +153,10 @@ namespace MoonPdfLib.MuPdf
 					ptrSrc += width * 4;
 				}
 			}
+            bmp.UnlockBits(imageData);
 
 			NativeMethods.DropPixmap(context, pix);
+            bmp.SetResolution(currentDpi.HorizontalDpi, currentDpi.VerticalDpi);
 
 			return bmp;
 		}

@@ -87,6 +87,7 @@
     <Reference Include="WindowsBase" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Helper\DpiHelper.cs" />
     <Compile Include="Helper\ListExtension.cs" />
     <Compile Include="Helper\BitmapExtensionMethods.cs" />
     <Compile Include="Helper\PageHelper.cs" />

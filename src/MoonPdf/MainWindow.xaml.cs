@@ -46,7 +46,7 @@ namespace MoonPdf
 			InitializeComponent();
 
 			this.dataContext = new MainWindowDataContext(this);
-			this.Icon = MoonPdf.Resources.moon.ToBitmap().ToBitmapSource();
+			this.Icon = MoonPdf.Resources.moon.ToBitmapSource();
 			this.DataContext = dataContext;
 			this.UpdateTitle();
 

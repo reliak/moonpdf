@@ -21,43 +21,23 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows;
+using System.Windows.Media;
 using System.Windows.Media.Imaging;
 
 namespace MoonPdfLib.Helper
 {
-	public static class BitmapExtensionMethods
+	internal static class BitmapExtensionMethods
 	{
-		public static BitmapSource ToBitmapSource(this System.Drawing.Bitmap source)
-		{
-			BitmapSource bitSrc = null;
+        public static BitmapSource ToBitmapSource(this System.Drawing.Bitmap bmp)
+        {
+            var rect = new System.Drawing.Rectangle(0, 0, bmp.Width, bmp.Height);
+            var bmpData = bmp.LockBits(rect, System.Drawing.Imaging.ImageLockMode.ReadWrite, System.Drawing.Imaging.PixelFormat.Format32bppRgb);
+            int bufferSize = bmpData.Stride * bmp.Height;
+            var bms = new System.Windows.Media.Imaging.WriteableBitmap(bmp.Width, bmp.Height, bmp.HorizontalResolution, bmp.VerticalResolution, PixelFormats.Bgr32, null);
+            bms.WritePixels(new Int32Rect(0, 0, bmp.Width, bmp.Height), bmpData.Scan0, bufferSize, bmpData.Stride);
+            bmp.UnlockBits(bmpData);
 
-			var hBitmap = source.GetHbitmap();
-
-			try
-			{
-				bitSrc = System.Windows.Interop.Imaging.CreateBitmapSourceFromHBitmap(
-					hBitmap,
-					IntPtr.Zero,
-					Int32Rect.Empty,
-					BitmapSizeOptions.FromEmptyOptions());
-			}
-			catch (Win32Exception)
-			{
-				bitSrc = null;
-			}
-			finally
-			{
-				NativeMethods.DeleteObject(hBitmap);
-			}
-
-			return bitSrc;
-		}
-
-		private static class NativeMethods
-		{
-			[DllImport("gdi32.dll")]
-			[return: MarshalAs(UnmanagedType.Bool)]
-			internal static extern bool DeleteObject(IntPtr hObject);
-		}
+            return bms;
+        }
 	}
 }

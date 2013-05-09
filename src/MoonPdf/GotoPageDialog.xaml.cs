@@ -39,7 +39,7 @@ namespace MoonPdf
 		{
 			InitializeComponent();
 
-			this.Icon = MoonPdf.Resources.moon.ToBitmap().ToBitmapSource();
+			this.Icon = MoonPdf.Resources.moon.ToBitmapSource();
 			this.MaxPageNumber = maxPageNumber;
 			this.txtPage.Text = currentPageNumber.ToString();
 			this.lblMaxPageNumber.Content = maxPageNumber;
