@@ -24,6 +24,8 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using MouseKeyboardActivityMonitor;
 using MouseKeyboardActivityMonitor.WinApi;
+using System.Windows.Media;
+using System.Windows.Controls.Primitives;
 
 namespace MoonPdfLib
 {
@@ -59,7 +61,7 @@ namespace MoonPdfLib
 			}
 			*/
 
-			if (!(e.OriginalSource is Control || e.OriginalSource is Panel || e.OriginalSource is Image || e.OriginalSource is Border))
+            if( IsScrollBarChild(e.OriginalSource as DependencyObject) ) // if the mouse click comes from the scrollbar, then we do not scroll
 				lastMouseDownLocation = null;
 			else
 			{
@@ -73,6 +75,21 @@ namespace MoonPdfLib
 				}
 			}
 		}
+
+        private static bool IsScrollBarChild(DependencyObject o)
+        {
+            DependencyObject parent = o;
+
+            while(parent != null)
+            {
+                if (parent is ScrollBar)
+                    return true;
+
+                parent = VisualTreeHelper.GetParent(parent);
+            }
+
+            return false;
+        }
 
 		void source_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
 		{
