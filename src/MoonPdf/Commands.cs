@@ -18,6 +18,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Windows;
 using System.Windows.Input;
 
 namespace MoonPdf
@@ -61,8 +62,17 @@ namespace MoonPdf
 				{
 					var dlg = new Microsoft.Win32.OpenFileDialog { Title = "Select PDF file...", DefaultExt = ".pdf", Filter = "PDF file (.pdf)|*.pdf",CheckFileExists = true };
 
-					if (dlg.ShowDialog() == true)
-						pdfPanel.OpenFile(dlg.FileName);
+                    if (dlg.ShowDialog() == true)
+                    {
+                        try
+                        {
+                            pdfPanel.OpenFile(dlg.FileName);
+                        }
+                        catch (Exception ex)
+                        {
+                            MessageBox.Show(string.Format("An error occured: " + ex.Message));
+                        }
+                    }
 				}, f => true, new KeyGesture(Key.O, ModifierKeys.Control));
 
 			this.ExitCommand = new DelegateCommand("Exit", f => wnd.Close(), f => true, new KeyGesture(Key.Q, ModifierKeys.Control));

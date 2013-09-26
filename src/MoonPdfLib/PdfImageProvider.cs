@@ -34,21 +34,23 @@ namespace MoonPdfLib
 		private int count = -1;
 		private int totalPages;
 		private bool preFetch;
+        private string password;
 
 		public PageDisplaySettings Settings { get; private set; }
 
-		public PdfImageProvider(string pdfFilename, int totalPages, PageDisplaySettings settings, bool preFetch = true)
+		public PdfImageProvider(string pdfFilename, int totalPages, PageDisplaySettings settings, bool preFetch = true, string password = null)
 		{
 			this.pdfFilename = pdfFilename;
 			this.totalPages = totalPages;
 			this.Settings = settings;
 			this.preFetch = preFetch; // preFetch is relevant for continuous page display
+            this.password = password;
 		}
 
 		public int FetchCount()
 		{
 			if (count == -1)
-				count = MuPdfWrapper.CountPages(pdfFilename);
+				count = MuPdfWrapper.CountPages(pdfFilename, this.password);
 			
 			return count;
 		}
@@ -80,7 +82,7 @@ namespace MoonPdfLib
 			{
 				var margin = new Thickness(0, 0, this.Settings.HorizontalOffsetBetweenPages, 0);
 
-				using (var bmp = MuPdfWrapper.ExtractPage(pdfFilename, i, this.Settings.ZoomFactor))
+				using (var bmp = MuPdfWrapper.ExtractPage(pdfFilename, i, this.Settings.ZoomFactor, this.password))
 				{
 					if (Settings.Rotation != ImageRotation.None)
 					{

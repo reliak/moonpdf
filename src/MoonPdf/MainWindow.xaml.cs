@@ -31,6 +31,7 @@ using System.Windows.Navigation;
 using System.Windows.Shapes;
 using MoonPdfLib;
 using MoonPdfLib.Helper;
+using MoonPdfLib.MuPdf;
 
 namespace MoonPdf
 {
@@ -54,6 +55,7 @@ namespace MoonPdf
 			moonPdfPanel.ZoomTypeChanged += moonPdfPanel_ZoomTypeChanged;
 			moonPdfPanel.PageRowDisplayChanged += moonPdfPanel_PageDisplayChanged;
 			moonPdfPanel.FileLoaded += moonPdfPanel_FileLoaded;
+            moonPdfPanel.PasswordRequired += moonPdfPanel_PasswordRequired;
 
 			this.UpdatePageDisplayMenuItem();
 			this.UpdateZoomMenuItems();
@@ -62,13 +64,32 @@ namespace MoonPdf
 			this.Loaded += MainWindow_Loaded;
 		}
 
+        void moonPdfPanel_PasswordRequired(object sender, PasswordRequiredEventArgs e)
+        {
+            var dlg = new PdfPasswordDialog();
+
+            if (dlg.ShowDialog() == true)
+                e.Password = dlg.Password;
+            else
+                e.Cancel = true;
+        }
+
 		void MainWindow_Loaded(object sender, RoutedEventArgs e)
 		{
 			var args = Environment.GetCommandLineArgs();
 
 			// if a filename was given via command line
-			if( args.Length > 1 && File.Exists(args[1]) )
-				this.moonPdfPanel.OpenFile(args[1]);
+            if (args.Length > 1 && File.Exists(args[1]))
+            {
+                try
+                {
+                    this.moonPdfPanel.OpenFile(args[1]);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(string.Format("An error occured: " + ex.Message));
+                }
+            }
 		}
 
 		void moonPdfPanel_PageDisplayChanged(object sender, EventArgs e)

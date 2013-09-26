@@ -29,7 +29,7 @@ using System.Text;
 
 namespace MoonPdfLib.MuPdf
 {
-	internal static class MuPdfWrapper
+	public static class MuPdfWrapper
 	{
 		/// <summary>
 		/// Extracts a PDF page as a Bitmap for a given pdf filename and a page number.
@@ -37,12 +37,15 @@ namespace MoonPdfLib.MuPdf
 		/// <param name="pdfFilename">Must be the full path for an existing PDF file</param>
 		/// <param name="pageNumber">Page number, starting at 1</param>
 		/// <param name="zoomFactor">Used to get a smaller or bigger Bitmap, depending on the specified value</param>
-		public static Bitmap ExtractPage(string pdfFilename, int pageNumber, float zoomFactor = 1.0f)
+        /// <param name="password">The password for the pdf file (if required)</param>
+		public static Bitmap ExtractPage(string pdfFilename, int pageNumber, float zoomFactor = 1.0f, string password = null)
 		{
 			var pageNumberIndex = Math.Max(0, pageNumber - 1); // pages start at index 0
 
 			using (var stream = new PdfFileStream(pdfFilename))
 			{
+                ValidatePassword(stream.Document, password);
+
 				IntPtr p = NativeMethods.LoadPage(stream.Document, pageNumberIndex); // loads the page
 				var bmp = RenderPage(stream.Context, stream.Document, p, zoomFactor);
 				NativeMethods.FreePage(stream.Document, p); // releases the resources consumed by the page
@@ -57,8 +60,9 @@ namespace MoonPdfLib.MuPdf
 		/// </summary>
 		/// <param name="pdfFilename">Must be the full path for an existing PDF file</param>
 		/// <param name="rotation">The rotation that should be applied</param>
-		/// <returns></returns>
-		public static System.Windows.Size[] GetPageBounds(string pdfFilename, ImageRotation rotation = ImageRotation.None)
+        /// <param name="password">The password for the pdf file (if required)</param>
+        /// <returns></returns>
+		public static System.Windows.Size[] GetPageBounds(string pdfFilename, ImageRotation rotation = ImageRotation.None, string password = null)
 		{
 			Func<double, double, System.Windows.Size> sizeCallback = (width, height) => new System.Windows.Size(width, height);
 			
@@ -67,6 +71,8 @@ namespace MoonPdfLib.MuPdf
 
 			using (var stream = new PdfFileStream(pdfFilename))
 			{
+                ValidatePassword(stream.Document, password);
+
 				var pageCount = NativeMethods.CountPages(stream.Document); // gets the number of pages in the document
                 var resultBounds = new System.Windows.Size[pageCount];
 
@@ -87,13 +93,34 @@ namespace MoonPdfLib.MuPdf
 		/// <summary>
 		/// Return the total number of pages for a give PDF filename.
 		/// </summary>
-		public static int CountPages(string pdfFilename)
+		public static int CountPages(string pdfFilename, string password = null)
 		{
 			using (var stream = new PdfFileStream(pdfFilename))
 			{
+                ValidatePassword(stream.Document, password);
+
 				return NativeMethods.CountPages(stream.Document); // gets the number of pages in the document
 			}
 		}
+
+        public static bool NeedsPassword(string pdfFilename)
+        {
+            using (var stream = new PdfFileStream(pdfFilename))
+            {
+                return NeedsPassword(stream.Document);
+            }
+        }
+
+        private static void ValidatePassword(IntPtr doc, string password)
+        {
+            if (NeedsPassword(doc) && NativeMethods.AuthenticatePassword(doc, password) == 0)
+                throw new MissingOrInvalidPdfPasswordException();
+        }
+
+        private static bool NeedsPassword(IntPtr doc)
+        {
+            return NativeMethods.NeedsPassword(doc) != 0;
+        }
 
 		static Bitmap RenderPage(IntPtr context, IntPtr document, IntPtr page, float zoomFactor)
 		{
@@ -244,6 +271,12 @@ namespace MoonPdfLib.MuPdf
 
 			[DllImport(DLL, EntryPoint = "fz_pixmap_samples", CallingConvention = CallingConvention.Cdecl)]
 			public static extern IntPtr GetSamples(IntPtr ctx, IntPtr pix);
+
+            [DllImport(DLL, EntryPoint = "fz_needs_password", CallingConvention = CallingConvention.Cdecl)]
+            public static extern int NeedsPassword(IntPtr doc);
+
+            [DllImport(DLL, EntryPoint = "fz_authenticate_password", CallingConvention = CallingConvention.Cdecl)]
+            public static extern int AuthenticatePassword(IntPtr doc, string password);
 		}
 	}
 
@@ -267,4 +300,11 @@ namespace MoonPdfLib.MuPdf
         public float A, B, C, D, E, F;
     }
 #pragma warning restore 0649
+
+    public class MissingOrInvalidPdfPasswordException : Exception
+    {
+        public MissingOrInvalidPdfPasswordException()
+            : base("A password for the pdf document was either not provided or is invalid.")
+        { }
+    }
 }

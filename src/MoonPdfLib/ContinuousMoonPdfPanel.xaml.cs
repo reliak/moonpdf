@@ -58,13 +58,14 @@ namespace MoonPdfLib
 			this.scrollViewer = VisualTreeHelperEx.FindChild<ScrollViewer>(this);
 		}
 
-		public void Load(string pdfFilename)
+        public void Load(string pdfFilename, string password = null)
 		{
 			this.virtualPanel = VisualTreeHelperEx.FindChild<CustomVirtualizingPanel>(this);
 			this.scrollViewer = VisualTreeHelperEx.FindChild<ScrollViewer>(this);
 			this.virtualPanel.PageRowBounds = this.parent.PageRowBounds.Select(f => f.SizeIncludingOffset).ToArray();
 			this.imageProvider = new PdfImageProvider(pdfFilename, this.parent.TotalPages,
-										new PageDisplaySettings(this.parent.GetPagesPerRow(), this.parent.ViewType, this.parent.HorizontalMargin, this.parent.Rotation));
+										new PageDisplaySettings(this.parent.GetPagesPerRow(), this.parent.ViewType, this.parent.HorizontalMargin, this.parent.Rotation),
+                                        password: password);
 
 			if (this.parent.ZoomType == ZoomType.Fixed)
 				this.CreateNewItemsSource();

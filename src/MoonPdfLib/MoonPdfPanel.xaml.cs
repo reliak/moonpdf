@@ -41,6 +41,7 @@ namespace MoonPdfLib
 		public event EventHandler ZoomTypeChanged;
 		public event EventHandler ViewTypeChanged;
 		public event EventHandler PageRowDisplayChanged;
+        public event EventHandler<PasswordRequiredEventArgs> PasswordRequired;
 
 		private ZoomType zoomType = ZoomType.Fixed;
 		private IMoonPdfPanel innerPanel;
@@ -115,6 +116,7 @@ namespace MoonPdfLib
 
 		public double HorizontalMargin { get { return this.PageMargin.Right; } }
 		public string CurrentFilename { get; private set; }
+        public string CurrentPassword { get; private set; }
 		public int TotalPages { get; private set; }
 		internal PageRowBound[] PageRowBounds { get { return this.pageRowBounds; } }
 
@@ -179,24 +181,38 @@ namespace MoonPdfLib
 				ZoomToHeight();
 		}
 
-		public void OpenFile(string pdfFilename)
+		public void OpenFile(string pdfFilename, string password = null)
 		{
 			if (!File.Exists(pdfFilename))
 				throw new FileNotFoundException(string.Empty, pdfFilename);
 
-			this.LoadPdfFile(pdfFilename);
+            var pw = password;
+
+            if (this.PasswordRequired != null && MuPdfWrapper.NeedsPassword(pdfFilename) && pw == null)
+            {
+                var e = new PasswordRequiredEventArgs();
+                this.PasswordRequired(this, e);
+
+                if (e.Cancel)
+                    return;
+
+                pw = e.Password;
+            }
+
+            this.LoadPdfFile(pdfFilename, pw);
 			this.CurrentFilename = pdfFilename;
+            this.CurrentPassword = pw;
 
 			if (this.FileLoaded != null)
 				this.FileLoaded(this, EventArgs.Empty);
 		}
 
-		private void LoadPdfFile(string pdfFilename)
+		private void LoadPdfFile(string pdfFilename, string password)
 		{
-			var pageBounds = MuPdfWrapper.GetPageBounds(pdfFilename, this.Rotation);
+			var pageBounds = MuPdfWrapper.GetPageBounds(pdfFilename, this.Rotation, password);
             this.pageRowBounds = CalculatePageRowBounds(pageBounds, this.ViewType);
 			this.TotalPages = pageBounds.Length;
-			this.innerPanel.Load(pdfFilename);
+			this.innerPanel.Load(pdfFilename, password);
 		}
 
 		private PageRowBound[] CalculatePageRowBounds(Size[] singlePageBounds, ViewType viewType)
@@ -327,7 +343,7 @@ namespace MoonPdfLib
 		public void Rotate(ImageRotation rotation)
 		{
 			var currentPage = this.innerPanel.GetCurrentPageIndex(this.ViewType) + 1;
-			this.LoadPdfFile(this.CurrentFilename);
+			this.LoadPdfFile(this.CurrentFilename, this.CurrentPassword);
 			this.innerPanel.GotoPage(currentPage);
 		}
 
@@ -392,7 +408,7 @@ namespace MoonPdfLib
 			{
 				Action reloadAction = () =>
 					{
-						this.LoadPdfFile(this.CurrentFilename);
+                        this.LoadPdfFile(this.CurrentFilename, this.CurrentPassword);
 						this.innerPanel.Zoom(zoom);
 						this.innerPanel.GotoPage(currentPage);
 					};
@@ -420,9 +436,41 @@ namespace MoonPdfLib
 				var filenames = (string[])e.Data.GetData(DataFormats.FileDrop);
 				var filename = filenames.FirstOrDefault();
 
-				if (filename != null && File.Exists(filename))
-					this.OpenFile(filename);
+                if (filename != null && File.Exists(filename))
+                {
+                    string pw = null;
+
+                    if (MuPdfWrapper.NeedsPassword(filename))
+                    {
+                        if (this.PasswordRequired == null)
+                            return;
+
+                        var args = new PasswordRequiredEventArgs();
+                        this.PasswordRequired(this, args);
+
+                        if (args.Cancel)
+                            return;
+
+                        //this.OpenFile(filename, args.Password);
+                        pw = args.Password;
+                    }
+                    
+                    try
+                    {
+                        this.OpenFile(filename, pw);
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show(string.Format("An error occured: " + ex.Message));
+                    }
+                }
 			}
 		}
 	}
+
+    public class PasswordRequiredEventArgs : EventArgs
+    {
+        public string Password { get; set; }
+        public bool Cancel { get; set; }
+    }
 }

@@ -31,7 +31,7 @@ namespace MoonPdfLib
 		ScrollViewer ScrollViewer { get; }
 		UserControl Instance { get; }
 		float CurrentZoom { get; }
-		void Load(string pdfFilename);
+		void Load(string pdfFilename, string password = null);
         void Zoom(double zoomFactor);
 		void ZoomIn();
 		void ZoomOut();
