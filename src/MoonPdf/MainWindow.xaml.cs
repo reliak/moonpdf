@@ -54,7 +54,7 @@ namespace MoonPdf
 			moonPdfPanel.ViewTypeChanged += moonPdfPanel_ViewTypeChanged;
 			moonPdfPanel.ZoomTypeChanged += moonPdfPanel_ZoomTypeChanged;
 			moonPdfPanel.PageRowDisplayChanged += moonPdfPanel_PageDisplayChanged;
-			moonPdfPanel.FileLoaded += moonPdfPanel_FileLoaded;
+			moonPdfPanel.PdfLoaded += moonPdfPanel_PdfLoaded;
             moonPdfPanel.PasswordRequired += moonPdfPanel_PasswordRequired;
 
 			this.UpdatePageDisplayMenuItem();
@@ -137,7 +137,7 @@ namespace MoonPdf
 			}
 		}
 
-		void moonPdfPanel_FileLoaded(object sender, EventArgs e)
+		void moonPdfPanel_PdfLoaded(object sender, EventArgs e)
 		{
 			this.UpdateTitle();
 		}
@@ -147,12 +147,23 @@ namespace MoonPdf
 			if( appName == null )
 				appName = ((AssemblyProductAttribute)Assembly.GetExecutingAssembly().GetCustomAttributes(typeof(AssemblyProductAttribute), true).First()).Product;
 
-			this.Title = IsFileOpen() ? string.Format("{0} - {1}", System.IO.Path.GetFileName(this.moonPdfPanel.CurrentFilename), appName) : appName;
+            if (IsPdfLoaded())
+            {
+                var fs = moonPdfPanel.CurrentSource as FileSource;
+
+                if( fs != null )
+                {
+                    this.Title = string.Format("{0} - {1}", System.IO.Path.GetFileName(fs.Filename), appName);
+                    return;
+                }
+            }
+            
+			this.Title = appName;
 		}
 
-		internal bool IsFileOpen()
+		internal bool IsPdfLoaded()
 		{
-			return !string.IsNullOrEmpty(moonPdfPanel.CurrentFilename);
+            return moonPdfPanel.CurrentSource != null;
 		}
 
 		protected override void OnPreviewKeyDown(KeyEventArgs e)

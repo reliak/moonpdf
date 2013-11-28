@@ -30,7 +30,7 @@ namespace MoonPdfLib
 {
 	internal class PdfImageProvider : IItemsProvider<IEnumerable<PdfImage>>
 	{
-		private string pdfFilename;
+        private IPdfSource pdfSource;
 		private int count = -1;
 		private int totalPages;
 		private bool preFetch;
@@ -38,9 +38,9 @@ namespace MoonPdfLib
 
 		public PageDisplaySettings Settings { get; private set; }
 
-		public PdfImageProvider(string pdfFilename, int totalPages, PageDisplaySettings settings, bool preFetch = true, string password = null)
+		public PdfImageProvider(IPdfSource pdfSource, int totalPages, PageDisplaySettings settings, bool preFetch = true, string password = null)
 		{
-			this.pdfFilename = pdfFilename;
+            this.pdfSource = pdfSource;
 			this.totalPages = totalPages;
 			this.Settings = settings;
 			this.preFetch = preFetch; // preFetch is relevant for continuous page display
@@ -50,7 +50,7 @@ namespace MoonPdfLib
 		public int FetchCount()
 		{
 			if (count == -1)
-				count = MuPdfWrapper.CountPages(pdfFilename, this.password);
+                count = MuPdfWrapper.CountPages(pdfSource, this.password);
 			
 			return count;
 		}
@@ -82,7 +82,7 @@ namespace MoonPdfLib
 			{
 				var margin = new Thickness(0, 0, this.Settings.HorizontalOffsetBetweenPages, 0);
 
-				using (var bmp = MuPdfWrapper.ExtractPage(pdfFilename, i, this.Settings.ZoomFactor, this.password))
+				using (var bmp = MuPdfWrapper.ExtractPage(pdfSource, i, this.Settings.ZoomFactor, this.password))
 				{
 					if (Settings.Rotation != ImageRotation.None)
 					{

@@ -14,6 +14,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 !*/
+using MoonPdfLib.MuPdf;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -31,7 +32,7 @@ namespace MoonPdfLib
 		ScrollViewer ScrollViewer { get; }
 		UserControl Instance { get; }
 		float CurrentZoom { get; }
-		void Load(string pdfFilename, string password = null);
+		void Load(IPdfSource source, string password = null);
         void Zoom(double zoomFactor);
 		void ZoomIn();
 		void ZoomOut();

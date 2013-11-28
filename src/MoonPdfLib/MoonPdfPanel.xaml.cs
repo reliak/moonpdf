@@ -37,7 +37,7 @@ namespace MoonPdfLib
 {
 	public partial class MoonPdfPanel : UserControl
 	{
-		public event EventHandler FileLoaded;
+		public event EventHandler PdfLoaded;
 		public event EventHandler ZoomTypeChanged;
 		public event EventHandler ViewTypeChanged;
 		public event EventHandler PageRowDisplayChanged;
@@ -115,7 +115,7 @@ namespace MoonPdfLib
 		#endregion
 
 		public double HorizontalMargin { get { return this.PageMargin.Right; } }
-		public string CurrentFilename { get; private set; }
+        public IPdfSource CurrentSource { get; private set; }
         public string CurrentPassword { get; private set; }
 		public int TotalPages { get; private set; }
 		internal PageRowBound[] PageRowBounds { get { return this.pageRowBounds; } }
@@ -161,7 +161,7 @@ namespace MoonPdfLib
 
 		void PdfViewerPanel_SizeChanged(object sender, SizeChangedEventArgs e)
 		{
-			if (this.CurrentFilename == null)
+			if (this.CurrentSource == null)
 				return;
 
 			resizeTimer.Stop();
@@ -172,7 +172,7 @@ namespace MoonPdfLib
 		{
 			resizeTimer.Stop();
 
-			if (this.CurrentFilename == null)
+			if (this.CurrentSource == null)
 				return;
 
 			if (this.ZoomType == ZoomType.FitToWidth)
@@ -181,14 +181,19 @@ namespace MoonPdfLib
 				ZoomToHeight();
 		}
 
-		public void OpenFile(string pdfFilename, string password = null)
-		{
-			if (!File.Exists(pdfFilename))
-				throw new FileNotFoundException(string.Empty, pdfFilename);
+        public void OpenFile(string pdfFilename, string password = null)
+        {
+            if (!File.Exists(pdfFilename))
+                throw new FileNotFoundException(string.Empty, pdfFilename);
 
+            this.Open(new FileSource(pdfFilename), password);
+        }
+
+		public void Open(IPdfSource source, string password = null)
+		{
             var pw = password;
 
-            if (this.PasswordRequired != null && MuPdfWrapper.NeedsPassword(pdfFilename) && pw == null)
+            if (this.PasswordRequired != null && MuPdfWrapper.NeedsPassword(source) && pw == null)
             {
                 var e = new PasswordRequiredEventArgs();
                 this.PasswordRequired(this, e);
@@ -199,21 +204,21 @@ namespace MoonPdfLib
                 pw = e.Password;
             }
 
-            this.LoadPdfFile(pdfFilename, pw);
-			this.CurrentFilename = pdfFilename;
+            this.LoadPdf(source, pw);
+			this.CurrentSource = source;
             this.CurrentPassword = pw;
 
-			if (this.FileLoaded != null)
-				this.FileLoaded(this, EventArgs.Empty);
+			if (this.PdfLoaded != null)
+				this.PdfLoaded(this, EventArgs.Empty);
 		}
-
-		private void LoadPdfFile(string pdfFilename, string password)
-		{
-			var pageBounds = MuPdfWrapper.GetPageBounds(pdfFilename, this.Rotation, password);
+        
+        private void LoadPdf(IPdfSource source, string password)
+        {
+            var pageBounds = MuPdfWrapper.GetPageBounds(source, this.Rotation, password);
             this.pageRowBounds = CalculatePageRowBounds(pageBounds, this.ViewType);
-			this.TotalPages = pageBounds.Length;
-			this.innerPanel.Load(pdfFilename, password);
-		}
+            this.TotalPages = pageBounds.Length;
+            this.innerPanel.Load(source, password);
+        }
 
 		private PageRowBound[] CalculatePageRowBounds(Size[] singlePageBounds, ViewType viewType)
 		{
@@ -343,7 +348,7 @@ namespace MoonPdfLib
 		public void Rotate(ImageRotation rotation)
 		{
 			var currentPage = this.innerPanel.GetCurrentPageIndex(this.ViewType) + 1;
-			this.LoadPdfFile(this.CurrentFilename, this.CurrentPassword);
+			this.LoadPdf(this.CurrentSource, this.CurrentPassword);
 			this.innerPanel.GotoPage(currentPage);
 		}
 
@@ -396,7 +401,7 @@ namespace MoonPdfLib
 			var currentPage = -1;
 			var zoom = 1.0f;
 
-			if (this.CurrentFilename != null)
+			if (this.CurrentSource != null)
 			{
 				currentPage = this.innerPanel.GetCurrentPageIndex(viewType) + 1;
 				zoom = this.innerPanel.CurrentZoom;
@@ -408,7 +413,7 @@ namespace MoonPdfLib
 			{
 				Action reloadAction = () =>
 					{
-                        this.LoadPdfFile(this.CurrentFilename, this.CurrentPassword);
+                        this.LoadPdf(this.CurrentSource, this.CurrentPassword);
 						this.innerPanel.Zoom(zoom);
 						this.innerPanel.GotoPage(currentPage);
 					};
@@ -440,7 +445,7 @@ namespace MoonPdfLib
                 {
                     string pw = null;
 
-                    if (MuPdfWrapper.NeedsPassword(filename))
+                    if (MuPdfWrapper.NeedsPassword(new FileSource(filename)))
                     {
                         if (this.PasswordRequired == null)
                             return;
@@ -451,7 +456,6 @@ namespace MoonPdfLib
                         if (args.Cancel)
                             return;
 
-                        //this.OpenFile(filename, args.Password);
                         pw = args.Password;
                     }
                     

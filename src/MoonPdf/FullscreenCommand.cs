@@ -50,7 +50,7 @@ namespace MoonPdf
 
 		public override bool CanExecute(object parameter)
 		{
-			return wnd.IsFileOpen();
+			return wnd.IsPdfLoaded();
 		}
 
 		public override void Execute(object parameter)

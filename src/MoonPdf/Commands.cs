@@ -56,7 +56,7 @@ namespace MoonPdf
 		public Commands(MainWindow wnd)
 		{
 			var pdfPanel = wnd.MoonPdfPanel;
-			Predicate<object> isPdfLoaded = f => wnd.IsFileOpen(); // used for the CanExecute callback
+			Predicate<object> isPdfLoaded = f => wnd.IsPdfLoaded(); // used for the CanExecute callback
 
 			this.OpenCommand = new DelegateCommand("Open...", f =>
 				{

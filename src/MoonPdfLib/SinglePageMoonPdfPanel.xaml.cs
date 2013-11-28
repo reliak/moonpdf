@@ -15,6 +15,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 !*/
 using MoonPdfLib.Helper;
+using MoonPdfLib.MuPdf;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -50,22 +51,22 @@ namespace MoonPdfLib
 			this.scrollViewer = VisualTreeHelperEx.FindChild<ScrollViewer>(this);
 		}
 
-        public void Load(string pdfFilename, string password = null)
-		{
-			this.scrollViewer = VisualTreeHelperEx.FindChild<ScrollViewer>(this);
-			this.imageProvider = new PdfImageProvider(pdfFilename, this.parent.TotalPages,
-				new PageDisplaySettings(this.parent.GetPagesPerRow(), this.parent.ViewType, this.parent.HorizontalMargin, this.parent.Rotation), false, password);
+        public void Load(IPdfSource source, string password = null)
+        {
+            this.scrollViewer = VisualTreeHelperEx.FindChild<ScrollViewer>(this);
+            this.imageProvider = new PdfImageProvider(source, this.parent.TotalPages,
+                new PageDisplaySettings(this.parent.GetPagesPerRow(), this.parent.ViewType, this.parent.HorizontalMargin, this.parent.Rotation), false, password);
 
-			currentPageIndex = 0;
+            currentPageIndex = 0;
 
-			if (this.parent.ZoomType == ZoomType.Fixed)
-				this.SetItemsSource();
-			else if (this.parent.ZoomType == ZoomType.FitToHeight)
-				this.ZoomToHeight();
-			else if (this.parent.ZoomType == ZoomType.FitToWidth)
-				this.ZoomToWidth();
-		}
-
+            if (this.parent.ZoomType == ZoomType.Fixed)
+                this.SetItemsSource();
+            else if (this.parent.ZoomType == ZoomType.FitToHeight)
+                this.ZoomToHeight();
+            else if (this.parent.ZoomType == ZoomType.FitToWidth)
+                this.ZoomToWidth();
+        }
+        
 		ScrollViewer IMoonPdfPanel.ScrollViewer
 		{
 			get { return this.scrollViewer; }
