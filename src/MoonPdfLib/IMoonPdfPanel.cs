@@ -33,6 +33,7 @@ namespace MoonPdfLib
 		UserControl Instance { get; }
 		float CurrentZoom { get; }
 		void Load(IPdfSource source, string password = null);
+        void Unload();
         void Zoom(double zoomFactor);
 		void ZoomIn();
 		void ZoomOut();

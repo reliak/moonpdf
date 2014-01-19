@@ -75,9 +75,28 @@ namespace MoonPdfLib
                 this.ZoomToWidth();
 
             if (this.scrollViewer != null)
+            {
+                this.scrollViewer.Visibility = System.Windows.Visibility.Visible;
                 this.scrollViewer.ScrollToTop();
+            }
         }
-        
+
+        public void Unload()
+        {
+            this.scrollViewer.Visibility = System.Windows.Visibility.Collapsed;
+            this.scrollViewer.ScrollToHorizontalOffset(0);
+            this.scrollViewer.ScrollToVerticalOffset(0);
+            this.imageProvider = null;
+
+            if (this.virtualizingPdfPages != null)
+            {
+                this.virtualizingPdfPages.CleanUpAllPages();
+                this.virtualizingPdfPages = null;
+            }
+
+            this.itemsControl.ItemsSource = null;
+        }
+
 		private void CreateNewItemsSource()
 		{
 			var pageTimeout = TimeSpan.FromSeconds(2);

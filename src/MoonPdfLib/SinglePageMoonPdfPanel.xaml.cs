@@ -59,6 +59,9 @@ namespace MoonPdfLib
 
             currentPageIndex = 0;
 
+            if (this.scrollViewer != null)
+                this.scrollViewer.Visibility = System.Windows.Visibility.Visible;
+
             if (this.parent.ZoomType == ZoomType.Fixed)
                 this.SetItemsSource();
             else if (this.parent.ZoomType == ZoomType.FitToHeight)
@@ -66,7 +69,17 @@ namespace MoonPdfLib
             else if (this.parent.ZoomType == ZoomType.FitToWidth)
                 this.ZoomToWidth();
         }
-        
+
+        public void Unload()
+        {
+            this.scrollViewer.Visibility = System.Windows.Visibility.Collapsed;
+            this.scrollViewer.ScrollToHorizontalOffset(0);
+            this.scrollViewer.ScrollToVerticalOffset(0);
+            currentPageIndex = 0;
+
+            this.imageProvider = null;
+        }
+
 		ScrollViewer IMoonPdfPanel.ScrollViewer
 		{
 			get { return this.scrollViewer; }

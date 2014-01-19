@@ -211,7 +211,19 @@ namespace MoonPdfLib
 			if (this.PdfLoaded != null)
 				this.PdfLoaded(this, EventArgs.Empty);
 		}
-        
+
+        public void Unload()
+        {
+            this.CurrentSource = null;
+            this.CurrentPassword = null;
+            this.TotalPages = 0;
+
+            this.innerPanel.Unload();
+
+            if (this.PdfLoaded != null)
+                this.PdfLoaded(this, EventArgs.Empty);
+        }
+
         private void LoadPdf(IPdfSource source, string password)
         {
             var pageBounds = MuPdfWrapper.GetPageBounds(source, this.Rotation, password);
