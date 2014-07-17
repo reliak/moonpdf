@@ -1,6 +1,8 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 2012
+# Visual Studio 2013
+VisualStudioVersion = 12.0.30501.0
+MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MoonPdfLib", "MoonPdfLib\MoonPdfLib.csproj", "{E5C5A57C-E464-4402-AD62-D6119EA92A8D}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MoonPdf", "MoonPdf\MoonPdf.csproj", "{0A2C7E6D-E41B-444E-A74F-C396F7912D9D}"
