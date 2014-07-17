@@ -64,7 +64,7 @@ namespace MoonPdfLib
 				{
 					lastMouseDownVerticalOffset = this.source.ScrollViewer.VerticalOffset;
 					lastMouseDownHorizontalOffset = this.source.ScrollViewer.HorizontalOffset;
-					lastMouseDownLocation = this.source.PointToScreen(e.GetPosition(this.source));
+					lastMouseDownLocation = e.GetPosition(this.source);
 
 					source.CaptureMouse();
 				}
