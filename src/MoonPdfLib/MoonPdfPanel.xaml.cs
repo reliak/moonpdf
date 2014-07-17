@@ -41,13 +41,13 @@ namespace MoonPdfLib
 		public event EventHandler ZoomTypeChanged;
 		public event EventHandler ViewTypeChanged;
 		public event EventHandler PageRowDisplayChanged;
-		public event EventHandler<PasswordRequiredEventArgs> PasswordRequired;
+        public event EventHandler<PasswordRequiredEventArgs> PasswordRequired;
 
 		private ZoomType zoomType = ZoomType.Fixed;
 		private IMoonPdfPanel innerPanel;
 		private MoonPdfPanelInputHandler inputHandler;
 		private PageRowBound[] pageRowBounds;
-
+		private DispatcherTimer resizeTimer;
 
 		#region Dependency properties
 		public static readonly DependencyProperty PageMarginProperty = DependencyProperty.Register("PageMargin", typeof(Thickness),
@@ -70,38 +70,7 @@ namespace MoonPdfLib
 
 		public static readonly DependencyProperty PageRowDisplayProperty = DependencyProperty.Register("PageRowDisplay", typeof(PageRowDisplayType),
 																			typeof(MoonPdfPanel), new FrameworkPropertyMetadata(PageRowDisplayType.SinglePageRow));
-
-		public static readonly DependencyProperty StreamSourceProperty = DependencyProperty.Register("StreamSource", typeof(Stream), typeof(MoonPdfPanel), new FrameworkPropertyMetadata(null, FrameworkPropertyMetadataOptions.AffectsRender, StreamSourcePropertyChanged));
-
-
-		public static readonly DependencyProperty FilenameSourceProperty = DependencyProperty.Register("FilenameSource", typeof(string), typeof(MoonPdfPanel), new FrameworkPropertyMetadata(string.Empty, FrameworkPropertyMetadataOptions.AffectsRender, FilenameSourcePropertyChanged));
-
-
-		public Stream StreamSource
-		{
-			get
-			{
-				return (Stream)GetValue(StreamSourceProperty);
-			}
-			set
-			{
-				SetValue(StreamSourceProperty, value);
-			}
-		}
-
-		public string FilenameSource
-		{
-			get
-			{
-				return (string)GetValue(FilenameSourceProperty);
-			}
-			set
-			{
-				SetValue(FilenameSourceProperty, value);
-			}
-		}
-
-
+		
 		public Thickness PageMargin
 		{
 			get { return (Thickness)GetValue(PageMarginProperty); }
@@ -131,7 +100,7 @@ namespace MoonPdfLib
 			get { return (MoonPdfLib.ViewType)GetValue(ViewTypeProperty); }
 			set { SetValue(ViewTypeProperty, value); }
 		}
-
+				
 		public ImageRotation Rotation
 		{
 			get { return (ImageRotation)GetValue(RotationProperty); }
@@ -146,8 +115,8 @@ namespace MoonPdfLib
 		#endregion
 
 		public double HorizontalMargin { get { return this.PageMargin.Right; } }
-		public IPdfSource CurrentSource { get; private set; }
-		public string CurrentPassword { get; private set; }
+        public IPdfSource CurrentSource { get; private set; }
+        public string CurrentPassword { get; private set; }
 		public int TotalPages { get; private set; }
 		internal PageRowBound[] PageRowBounds { get { return this.pageRowBounds; } }
 
@@ -183,33 +152,26 @@ namespace MoonPdfLib
 			this.ChangeDisplayType(this.PageRowDisplay);
 			this.inputHandler = new MoonPdfPanelInputHandler(this);
 
-			//Panel events only fire mouse events when background is set
-			if (this.Background == null)
-			{
-				this.Background = Brushes.Transparent;
-			}
-
 			this.SizeChanged += PdfViewerPanel_SizeChanged;
 
-			this.Loaded += MoonPdfPanel_Loaded;
+			resizeTimer = new DispatcherTimer();
+			resizeTimer.Interval = TimeSpan.FromMilliseconds(150);
+			resizeTimer.Tick += resizeTimer_Tick;
 		}
 
-		void MoonPdfPanel_Loaded(object sender, RoutedEventArgs e)
-		{
-			UpdateZoom(sender, e);
-		}
-
-	
 		void PdfViewerPanel_SizeChanged(object sender, SizeChangedEventArgs e)
 		{
 			if (this.CurrentSource == null)
 				return;
 
-			Dispatcher.BeginInvoke((Action)(() => UpdateZoom(sender, e)), DispatcherPriority.Background);
+			resizeTimer.Stop();
+			resizeTimer.Start();
 		}
 
-		void UpdateZoom(object sender, EventArgs e)
+		void resizeTimer_Tick(object sender, EventArgs e)
 		{
+			resizeTimer.Stop();
+
 			if (this.CurrentSource == null)
 				return;
 
@@ -219,56 +181,56 @@ namespace MoonPdfLib
 				ZoomToHeight();
 		}
 
-		public void OpenFile(string pdfFilename, string password = null)
-		{
-			if (!File.Exists(pdfFilename))
-				throw new FileNotFoundException(string.Empty, pdfFilename);
+        public void OpenFile(string pdfFilename, string password = null)
+        {
+            if (!File.Exists(pdfFilename))
+                throw new FileNotFoundException(string.Empty, pdfFilename);
 
-			this.Open(new FileSource(pdfFilename), password);
-		}
+            this.Open(new FileSource(pdfFilename), password);
+        }
 
 		public void Open(IPdfSource source, string password = null)
 		{
-			var pw = password;
+            var pw = password;
 
-			if (this.PasswordRequired != null && MuPdfWrapper.NeedsPassword(source) && pw == null)
-			{
-				var e = new PasswordRequiredEventArgs();
-				this.PasswordRequired(this, e);
+            if (this.PasswordRequired != null && MuPdfWrapper.NeedsPassword(source) && pw == null)
+            {
+                var e = new PasswordRequiredEventArgs();
+                this.PasswordRequired(this, e);
 
-				if (e.Cancel)
-					return;
+                if (e.Cancel)
+                    return;
 
-				pw = e.Password;
-			}
+                pw = e.Password;
+            }
 
-			this.LoadPdf(source, pw);
+            this.LoadPdf(source, pw);
 			this.CurrentSource = source;
-			this.CurrentPassword = pw;
+            this.CurrentPassword = pw;
 
 			if (this.PdfLoaded != null)
 				this.PdfLoaded(this, EventArgs.Empty);
 		}
 
-		public void Unload()
-		{
-			this.CurrentSource = null;
-			this.CurrentPassword = null;
-			this.TotalPages = 0;
+        public void Unload()
+        {
+            this.CurrentSource = null;
+            this.CurrentPassword = null;
+            this.TotalPages = 0;
 
-			this.innerPanel.Unload();
+            this.innerPanel.Unload();
 
-			if (this.PdfLoaded != null)
-				this.PdfLoaded(this, EventArgs.Empty);
-		}
+            if (this.PdfLoaded != null)
+                this.PdfLoaded(this, EventArgs.Empty);
+        }
 
-		private void LoadPdf(IPdfSource source, string password)
-		{
-			var pageBounds = MuPdfWrapper.GetPageBounds(source, this.Rotation, password);
-			this.pageRowBounds = CalculatePageRowBounds(pageBounds, this.ViewType);
-			this.TotalPages = pageBounds.Length;
-			this.innerPanel.Load(source, password);
-		}
+        private void LoadPdf(IPdfSource source, string password)
+        {
+            var pageBounds = MuPdfWrapper.GetPageBounds(source, this.Rotation, password);
+            this.pageRowBounds = CalculatePageRowBounds(pageBounds, this.ViewType);
+            this.TotalPages = pageBounds.Length;
+            this.innerPanel.Load(source, password);
+        }
 
 		private PageRowBound[] CalculatePageRowBounds(Size[] singlePageBounds, ViewType viewType)
 		{
@@ -278,7 +240,7 @@ namespace MoonPdfLib
 
 			if (viewType == MoonPdfLib.ViewType.SinglePage)
 			{
-				finalBounds.AddRange(singlePageBounds.Select(p => new PageRowBound(p, verticalBorderOffset, 0)));
+				finalBounds.AddRange(singlePageBounds.Select(p => new PageRowBound( p, verticalBorderOffset, 0)));
 			}
 			else
 			{
@@ -330,25 +292,25 @@ namespace MoonPdfLib
 
 		public void ZoomIn()
 		{
-			this.innerPanel.ZoomIn();
+            this.innerPanel.ZoomIn();
 			this.ZoomType = ZoomType.Fixed;
 		}
 
 		public void ZoomOut()
 		{
-			this.innerPanel.ZoomOut();
+            this.innerPanel.ZoomOut();
 			this.ZoomType = ZoomType.Fixed;
 		}
 
 		public void Zoom(double zoomFactor)
 		{
-			this.innerPanel.Zoom(zoomFactor);
+            this.innerPanel.Zoom(zoomFactor);
 			this.ZoomType = ZoomType.Fixed;
 		}
 
-		/// <summary>
-		/// Sets the ZoomType back to Fixed
-		/// </summary>
+        /// <summary>
+        /// Sets the ZoomType back to Fixed
+        /// </summary>
 		public void SetFixedZoom()
 		{
 			this.ZoomType = MoonPdfLib.ZoomType.Fixed;
@@ -390,7 +352,7 @@ namespace MoonPdfLib
 		public void RotateLeft()
 		{
 			if ((int)this.Rotation > 0)
-				this.Rotation = (ImageRotation)this.Rotation - 1;
+				this.Rotation = (ImageRotation)this.Rotation -1;
 			else
 				this.Rotation = ImageRotation.Rotate270;
 		}
@@ -411,7 +373,7 @@ namespace MoonPdfLib
 		{
 			base.OnPropertyChanged(e);
 
-			if (e.Property.Name.Equals("PageRowDisplay"))
+            if (e.Property.Name.Equals("PageRowDisplay"))
 				ChangeDisplayType((PageRowDisplayType)e.NewValue);
 			else if (e.Property.Name.Equals("Rotation"))
 				this.Rotate((ImageRotation)e.NewValue);
@@ -421,7 +383,7 @@ namespace MoonPdfLib
 
 		private void ApplyChangedViewType(ViewType oldViewType)
 		{
-			UpdateAndReload(() => { }, oldViewType);
+			UpdateAndReload(() => {}, oldViewType);
 
 			if (this.ViewTypeChanged != null)
 				this.ViewTypeChanged(this, EventArgs.Empty);
@@ -463,7 +425,7 @@ namespace MoonPdfLib
 			{
 				Action reloadAction = () =>
 					{
-						this.LoadPdf(this.CurrentSource, this.CurrentPassword);
+                        this.LoadPdf(this.CurrentSource, this.CurrentPassword);
 						this.innerPanel.Zoom(zoom);
 						this.innerPanel.GotoPage(currentPage);
 					};
@@ -473,7 +435,7 @@ namespace MoonPdfLib
 				else
 				{
 					// we need to wait until the controls are loaded and then reload the pdf
-					this.innerPanel.Instance.Loaded += (s, e) => { reloadAction(); };
+					this.innerPanel.Instance.Loaded += (s, e) => { reloadAction();	};
 				}
 			}
 		}
@@ -491,54 +453,40 @@ namespace MoonPdfLib
 				var filenames = (string[])e.Data.GetData(DataFormats.FileDrop);
 				var filename = filenames.FirstOrDefault();
 
-				if (filename != null && File.Exists(filename))
-				{
-					string pw = null;
+                if (filename != null && File.Exists(filename))
+                {
+                    string pw = null;
 
-					if (MuPdfWrapper.NeedsPassword(new FileSource(filename)))
-					{
-						if (this.PasswordRequired == null)
-							return;
+                    if (MuPdfWrapper.NeedsPassword(new FileSource(filename)))
+                    {
+                        if (this.PasswordRequired == null)
+                            return;
 
-						var args = new PasswordRequiredEventArgs();
-						this.PasswordRequired(this, args);
+                        var args = new PasswordRequiredEventArgs();
+                        this.PasswordRequired(this, args);
 
-						if (args.Cancel)
-							return;
+                        if (args.Cancel)
+                            return;
 
-						pw = args.Password;
-					}
-
-					try
-					{
-						this.OpenFile(filename, pw);
-					}
-					catch (Exception ex)
-					{
-						MessageBox.Show(string.Format("An error occured: " + ex.Message));
-					}
-				}
+                        pw = args.Password;
+                    }
+                    
+                    try
+                    {
+                        this.OpenFile(filename, pw);
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show(string.Format("An error occured: " + ex.Message));
+                    }
+                }
 			}
 		}
-
-		private static void FilenameSourcePropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
-		{
-			var control = (MoonPdfPanel)d;
-
-			control.OpenFile((string)e.NewValue);
-		}
-
-		private static void StreamSourcePropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
-		{
-			var control = (MoonPdfPanel)d;
-
-			control.Open(new StreamSource((Stream)e.NewValue));
-		}
 	}
 
-	public class PasswordRequiredEventArgs : EventArgs
-	{
-		public string Password { get; set; }
-		public bool Cancel { get; set; }
-	}
+    public class PasswordRequiredEventArgs : EventArgs
+    {
+        public string Password { get; set; }
+        public bool Cancel { get; set; }
+    }
 }
