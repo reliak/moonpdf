@@ -343,7 +343,7 @@ namespace MoonPdfLib
 
 		public void RotateRight()
 		{
-			if ((int)this.Rotation < Enum.GetValues(typeof(ImageRotation)).Length)
+			if (this.Rotation != ImageRotation.Rotate270)
 				this.Rotation = (ImageRotation)this.Rotation + 1;
 			else
 				this.Rotation = ImageRotation.None;
