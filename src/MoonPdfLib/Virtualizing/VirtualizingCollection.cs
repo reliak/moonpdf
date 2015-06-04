@@ -155,6 +155,10 @@ namespace MoonPdfLib.Virtualizing
 				// determine which page and offset within page
 				int pageIndex = index / PageSize;
 				int pageOffset = index % PageSize;
+				
+				if (_pages.ContainsKey(pageIndex) && _pages[pageIndex] != null && _pages[pageIndex][pageOffset] != null) {
+					return _pages[pageIndex][pageOffset];
+				}
 
 				// request primary page
 				RequestPage(pageIndex);
