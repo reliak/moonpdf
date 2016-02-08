@@ -218,10 +218,14 @@ namespace MoonPdfLib
 
 			if( pageIndex > 0 )
 			{
-				if (viewType == ViewType.Facing)
-					pageIndex *= 2;
-				else if (viewType == ViewType.BookView)
-					pageIndex = (pageIndex * 2) - 1;
+                if (viewType == ViewType.Facing || (int)viewType > 2)
+                {
+                    var multiplier = viewType == ViewType.Facing ? 2 : (int)viewType;
+                    pageIndex *= multiplier;
+                    //pageIndex *= 2;
+                }
+                else if (viewType == ViewType.BookView)
+                    pageIndex = (pageIndex * 2) - 1;
 			}
 
 			return pageIndex;

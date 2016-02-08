@@ -99,7 +99,7 @@ namespace MoonPdfLib
                     // because FetchRange is NOT called from the UI thread
 					bms.Freeze();
 
-					if( (i == 1 && viewType == ViewType.BookView) || (i + offset) % 2 == 0 )
+					if( (i == 1 && viewType == ViewType.BookView) || (i + offset) % imagesPerRow == 0 )
 						margin.Right = 0; // set right margin to zero for first page and for all pages that are on the right side
 
 					var img = new PdfImage { ImageSource = bms, Margin = margin };

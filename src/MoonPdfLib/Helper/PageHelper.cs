@@ -23,18 +23,23 @@ namespace MoonPdfLib.Helper
 {
 	internal static class PageHelper
 	{
-		/// <summary>
-		/// Returns the next page index or -1 if already at the last page
-		/// </summary>
-		/// <param name="currentPageIndex">The page index starting with 0</param>
-		public static int GetPreviousPageIndex(int currentPageIndex, ViewType viewType)
+        /// <summary>
+        /// Returns the previous page index or -1 if already at the first page
+        /// </summary>
+        /// <param name="currentPageIndex">The page index starting with 0</param>
+        public static int GetPreviousPageIndex(int currentPageIndex, ViewType viewType)
 		{
 			var subtract = 1; // if single page view type
 
-			if (viewType == ViewType.Facing)
-				subtract = (currentPageIndex % 2 == 0 ? 2 : 3);
-			else if (viewType == ViewType.BookView)
-				subtract = (currentPageIndex % 2 == 0 ? 3 : 2);
+            if (viewType == ViewType.Facing || (int)viewType > 2)
+            {
+                var n = viewType == ViewType.Facing ? 2 : (int)viewType;
+                var mod = currentPageIndex % n;
+                //subtract = (currentPageIndex % 2 == 0 ? 2 : 3);
+                subtract = (mod == 0 ? n : n + mod);
+            }
+            else if (viewType == ViewType.BookView)
+                subtract = (currentPageIndex % 2 == 0 ? 3 : 2);
 
 			if (Math.Max(0, currentPageIndex - subtract) == 0 && currentPageIndex == 0) // we are already at the first visible page
 				return -1;
@@ -42,18 +47,23 @@ namespace MoonPdfLib.Helper
 			return Math.Max(0, currentPageIndex - subtract);
 		}
 
-		/// <summary>
-		/// Returns the previous page index or -1 if already at the first page
-		/// </summary>
-		/// <param name="currentPageIndex">The page index starting with 0</param>
-		public static int GetNextPageIndex(int currentPageIndex, int totalPages, ViewType viewType)
+        /// <summary>
+        /// Returns the next page index or -1 if already at the last page
+        /// </summary>
+        /// <param name="currentPageIndex">The page index starting with 0</param>
+        public static int GetNextPageIndex(int currentPageIndex, int totalPages, ViewType viewType)
 		{
 			var add = 1; // if single page view type
 
-			if (viewType == ViewType.Facing)
-				add = (currentPageIndex % 2 == 0) ? 2 : 1;
-			else if (viewType == ViewType.BookView)
-				add = (currentPageIndex == 0 || currentPageIndex % 2 == 0) ? 1 : 2;
+            if (viewType == ViewType.Facing || (int)viewType > 2)
+            {
+                var n = viewType == ViewType.Facing ? 2 : (int)viewType;
+                var mod = currentPageIndex % n;
+                //add = (currentPageIndex % 2 == 0) ? 2 : 1;
+                add = (mod == 0 ? n : n - mod);
+            }
+            else if (viewType == ViewType.BookView)
+                add = (currentPageIndex == 0 || currentPageIndex % 2 == 0) ? 1 : 2;
 
 			if ((currentPageIndex + add) >= totalPages) // we are already at the last visible page
 				return -1;
@@ -72,10 +82,15 @@ namespace MoonPdfLib.Helper
 		{
 			var visibleIndex = currentPageIndex; // for single page
 
-			if (viewType == ViewType.Facing)
-				visibleIndex = ((currentPageIndex + ((currentPageIndex % 2 == 0) ? 3 : 1)) / 2) - 1;
-			else if (viewType == ViewType.BookView && currentPageIndex > 0)
-				visibleIndex = (currentPageIndex + ((currentPageIndex % 2 == 0) ? 0 : 1)) / 2;
+            if (viewType == ViewType.Facing || (int)viewType > 2)
+            {
+                var n = viewType == ViewType.Facing ? 2 : (int)viewType;
+                var mod = currentPageIndex % n;
+                //visibleIndex = ((currentPageIndex + ((currentPageIndex % 2 == 0) ? 3 : 1)) / 2) - 1;
+                visibleIndex = ((currentPageIndex + (mod == 0 ? (n+1) : 1)) / n) - 1;
+            }
+            else if (viewType == ViewType.BookView && currentPageIndex > 0)
+                visibleIndex = (currentPageIndex + ((currentPageIndex % 2 == 0) ? 0 : 1)) / 2;
 
 			return visibleIndex;
 		}

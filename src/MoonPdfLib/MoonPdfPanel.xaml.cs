@@ -267,8 +267,14 @@ namespace MoonPdfLib
 
 		internal int GetPagesPerRow()
 		{
-			return this.ViewType == MoonPdfLib.ViewType.SinglePage ? 1 : 2;
-		}
+            if (this.ViewType == MoonPdfLib.ViewType.SinglePage)
+                return 1;
+
+            if (this.ViewType == MoonPdfLib.ViewType.Facing || this.ViewType == MoonPdfLib.ViewType.BookView)
+                return 2;
+
+            return (int)this.ViewType;
+        }
 
 		public int GetCurrentPageNumber()
 		{
