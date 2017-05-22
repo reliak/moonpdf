@@ -70,8 +70,11 @@ namespace MoonPdfLib
 
 		public static readonly DependencyProperty PageRowDisplayProperty = DependencyProperty.Register("PageRowDisplay", typeof(PageRowDisplayType),
 																			typeof(MoonPdfPanel), new FrameworkPropertyMetadata(PageRowDisplayType.SinglePageRow));
-		
-		public Thickness PageMargin
+
+        public static readonly DependencyProperty PdfFilePathProperty = DependencyProperty.RegisterAttached("PdfFilePath", typeof(string),
+                                                                            typeof(MoonPdfPanel), new PropertyMetadata(""));
+
+        public Thickness PageMargin
 		{
 			get { return (Thickness)GetValue(PageMarginProperty); }
 			set { SetValue(PageMarginProperty, value); }
@@ -112,9 +115,15 @@ namespace MoonPdfLib
 			get { return (PageRowDisplayType)GetValue(PageRowDisplayProperty); }
 			set { SetValue(PageRowDisplayProperty, value); }
 		}
-		#endregion
 
-		public double HorizontalMargin { get { return this.PageMargin.Right; } }
+        public string PdfFilePath
+        {
+            get { return (string)GetValue(PdfFilePathProperty); }
+            set { SetValue(PdfFilePathProperty, value); }
+        }
+        #endregion
+
+        public double HorizontalMargin { get { return this.PageMargin.Right; } }
         public IPdfSource CurrentSource { get; private set; }
         public string CurrentPassword { get; private set; }
 		public int TotalPages { get; private set; }
@@ -379,7 +388,9 @@ namespace MoonPdfLib
 				this.Rotate((ImageRotation)e.NewValue);
 			else if (e.Property.Name.Equals("ViewType"))
 				this.ApplyChangedViewType((ViewType)e.OldValue);
-		}
+            else if (e.Property.Name.Equals("PdfFilePath"))
+                this.OpenFile((string)e.NewValue);
+        }
 
 		private void ApplyChangedViewType(ViewType oldViewType)
 		{
