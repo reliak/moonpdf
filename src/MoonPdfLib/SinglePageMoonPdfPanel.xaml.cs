@@ -29,22 +29,25 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using System.Collections.ObjectModel;
 
 namespace MoonPdfLib
 {
 	internal partial class SinglePageMoonPdfPanel : UserControl, IMoonPdfPanel
-	{
-		private MoonPdfPanel parent;
+    {
+        private MoonPdfPanel parent;
 		private ScrollViewer scrollViewer;
 		private PdfImageProvider imageProvider;
 		private int currentPageIndex = 0; // starting at 0
+        private readonly ObservableCollection<PdfImage> _pdfImages = new ObservableCollection<PdfImage>();
 
-		public SinglePageMoonPdfPanel(MoonPdfPanel parent)
+        public SinglePageMoonPdfPanel(MoonPdfPanel parent)
 		{
 			InitializeComponent();
 			this.parent = parent;
 			this.SizeChanged += SinglePageMoonPdfPanel_SizeChanged;
-		}
+            this.itemsControl.ItemsSource = _pdfImages;
+        }
 
 		void SinglePageMoonPdfPanel_SizeChanged(object sender, SizeChangedEventArgs e)
 		{
@@ -132,8 +135,15 @@ namespace MoonPdfLib
 		private void SetItemsSource()
 		{
 			var startIndex = PageHelper.GetVisibleIndexFromPageIndex( this.currentPageIndex, this.parent.ViewType);
-			this.itemsControl.ItemsSource = this.imageProvider.FetchRange(startIndex, this.parent.GetPagesPerRow()).FirstOrDefault();
-		}
+            if (this.itemsControl != null && this.imageProvider != null)
+            {
+                _pdfImages.Clear();
+                foreach (var item in this.imageProvider.FetchRange(startIndex, this.parent.GetPagesPerRow()).FirstOrDefault())
+                {
+                    _pdfImages.Add(item);
+                }
+            }
+        }
 
 		public int GetCurrentPageIndex(ViewType viewType)
 		{
